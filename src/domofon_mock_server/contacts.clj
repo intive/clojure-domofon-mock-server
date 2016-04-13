@@ -2,36 +2,22 @@
   (:require [clojure.string :as s])
   (:require [clojure.walk :as walk]))
 
-(defn make-full-contact [uuid]
-  {
-    :id uuid
-    :name "John"
-    :notifyEmail "email@abc.com"
-    :phone "+48 111 222 333"
-    :company "Co ltd"
-    :adminEmail "admin_email@abc.com"
-    :fromDate "2016-04-12"
-    :tillDate "2016-04-16"
-    :isImportant false
-    :message "Some fancy message"
-    :deputy {
-      :name "Deputy of John"
-      :company "Co ltd."
-      :notifyEmail "some_johnny@abc.com"
-      :phone "+48 111 111 333"}})
-
-(defn make-minimal-contact [uuid]
-  (select-keys (make-full-contact uuid) [:id :name :notifyEmail :phone]))
-
 (def saved-contacts (atom {}))
 
-(defn get-or-make-contact [uuid]
+(defn get-saved-contact [id]
   (let [saved @saved-contacts]
     (cond
-      (contains? saved uuid) (uuid saved)
-      (s/includes? uuid "333") (make-minimal-contact uuid)
-      :else (make-full-contact uuid))))
+      (contains? saved id) (get saved id)
+      :else [] )))
+
+(defn get-saved-contacts []
+  (let [saved @saved-contacts]
+    (cond
+      (empty? saved) []
+      :else (vals saved))))
 
 (defn save-contact [id contact]
-  (swap! saved-contacts assoc id (clojure.walk/keywordize-keys contact) )
-  (id))
+  (swap! saved-contacts assoc id (clojure.walk/keywordize-keys (assoc contact :id id)))
+  id)
+
+(defn delete-saved-contact [id] (swap! saved-contacts dissoc id) "ok")
