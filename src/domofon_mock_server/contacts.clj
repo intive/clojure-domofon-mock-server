@@ -1,5 +1,6 @@
 (ns domofon-mock-server.contacts
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s])
+  (:require [clojure.walk :as walk]))
 
 (defn make-full-contact [uuid]
   {
@@ -22,7 +23,15 @@
 (defn make-minimal-contact [uuid]
   (select-keys (make-full-contact uuid) [:id :name :notifyEmail :phone]))
 
-(defn make-contact [uuid]
-  (cond
-    (s/includes? uuid "333") (make-minimal-contact uuid)
-    :else (make-full-contact uuid)))
+(def saved-contacts (atom {}))
+
+(defn get-or-make-contact [uuid]
+  (let [saved @saved-contacts]
+    (cond
+      (contains? saved uuid) (uuid saved)
+      (s/includes? uuid "333") (make-minimal-contact uuid)
+      :else (make-full-contact uuid))))
+
+(defn save-contact [id contact]
+  (swap! saved-contacts assoc id (clojure.walk/keywordize-keys contact) )
+  (id))

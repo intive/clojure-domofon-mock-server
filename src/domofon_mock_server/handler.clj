@@ -9,13 +9,15 @@
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
-(defn get-contact [id] (response (make-contact id)))
-(defn get-contacts [] (response (repeat 10 (make-contact (uuid)))))
+(defn get-contact [id] (response (get-or-make-contact id)))
+(defn get-contacts [] (response (repeat 10 (get-or-make-contact (uuid)))))
+(defn post-contact [contact] (response (save-contact uuid contact)))
 
 (defroutes app-routes
-  (GET "/contact/:id" [id] (get-contact id))
-  (GET "/contacts" [] (get-contacts))
-  (route/not-found "Not Found"))
+  (GET  "/contacts/:id" [id] (get-contact id))
+  (GET  "/contacts" [] (get-contacts))
+  (POST "/contacts" req (post-contact (:body req)))
+  (route/not-found "Invalid url"))
 
 (def app
   (-> app-routes
