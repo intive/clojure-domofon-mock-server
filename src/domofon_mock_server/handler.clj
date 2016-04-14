@@ -14,10 +14,13 @@
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
 (defn get-contact [id]
-  (let [res (get-saved-contact id)]
-    (cond
-     (not-empty res) (json/write-str res)
-     :else  {:status 404} )))
+  (cond
+    (not (nil? (re-matches #"[a-e0-9]{8}[-][a-e0-9]{4}[-][a-e0-9]{4}[-][a-e0-9]{4}[-][a-e0-9]{12}" id)))
+      (let [res (get-saved-contact id)]
+          (cond
+           (not-empty res) (json/write-str res)
+           :else  {:status 404} ))
+    :else  {:status 400} ))
 
 (defn get-contacts [accept-header]
   (cond
