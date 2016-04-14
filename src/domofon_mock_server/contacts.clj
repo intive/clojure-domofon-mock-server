@@ -1,6 +1,5 @@
 (ns domofon-mock-server.contacts
-  (:require [clojure.string :as s])
-  (:require [clojure.walk :as walk]))
+  (:require [clojure.string :as s]))
 
 (def saved-contacts (atom {}))
 
@@ -17,7 +16,7 @@
       :else (vals saved))))
 
 (defn save-contact [id contact]
-  (swap! saved-contacts assoc id (clojure.walk/keywordize-keys (assoc contact :id id)))
+  (swap! saved-contacts assoc id (assoc contact :id id))
   id)
 
 (defn delete-saved-contact [id] (swap! saved-contacts dissoc id) "ok")
