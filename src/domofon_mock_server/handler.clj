@@ -32,18 +32,15 @@
 (defn missing [required available]
   (set/difference required (set (keys available))))
 
-(defn missing-str [missing]
-  (string/replace (string/join ", " missing) ":" ""))
-
 (defn post-contact [contact-string headers]
   (let [contact (clojure.walk/keywordize-keys contact-string)
         missing (missing required contact)
-        missing-str (missing-str missing)
+        missing-str (vec (map name missing))
         accept-header (get headers "accept")]
     (cond
       (and (.contains (get headers "content-type") "text/plain") (string/blank? contact)) {:status 415}
       (empty? contact) {:status 422}
-      (not (empty? missing)) {:status 422 :body (json/write-str {:code 422 :message (str "Missing fields: " missing-str) :fields missing-str}) }
+      (not (empty? missing)) {:status 422 :body (json/write-str {:code 422 :message (str "Missing fields: " missing-str) :fields missing-str}) :headers {"Content-Type" "application/json"} }
       :else
         (let [saved (save-contact (uuid) contact)]
           (cond
