@@ -19,7 +19,10 @@
      (not-empty res) (json/write-str res)
      :else  {:status 404} )))
 
-(defn get-contacts [] (json/write-str (get-saved-contacts)))
+(defn get-contacts [accept-header]
+  (cond
+    (= accept-header "application/json") { :headers {"Content-Type" "application/json"} :body (json/write-str (get-saved-contacts))}
+    :else {:status 406} ))
 
 (def required #{:name :notifyEmail :phone})
 
@@ -48,7 +51,7 @@
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
-  (GET    "/contacts" [] (get-contacts))
+  (GET    "/contacts" req (get-contacts (get-in req [:headers "accept"])))
   (POST   "/contacts" req (post-contact (:body req) (get-in req [:headers "accept"])))
   (route/not-found "Invalid url"))
 
