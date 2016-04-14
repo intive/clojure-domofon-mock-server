@@ -15,16 +15,16 @@
 
 (defn get-contact [id]
   (cond
-    (not (nil? (re-matches #"[a-e0-9]{8}[-][a-e0-9]{4}[-][a-e0-9]{4}[-][a-e0-9]{4}[-][a-e0-9]{12}" id)))
+    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
       (let [res (get-saved-contact id)]
           (cond
-           (not-empty res) (json/write-str res)
+           (not-empty res) {:headers {"Content-Type" "application/json"} :body (json/write-str res)}
            :else  {:status 404} ))
     :else  {:status 400} ))
 
 (defn get-contacts [accept-header]
   (cond
-    (= accept-header "application/json") { :headers {"Content-Type" "application/json"} :body (json/write-str (get-saved-contacts))}
+    (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (json/write-str (get-saved-contacts))}
     :else {:status 406} ))
 
 (def required #{:name :notifyEmail :phone})
@@ -35,12 +35,14 @@
 (defn missing-str [missing]
   (string/replace (string/join ", " missing) ":" ""))
 
-(defn post-contact [contact-string accept-header]
+(defn post-contact [contact-string headers]
   (let [contact (clojure.walk/keywordize-keys contact-string)
         missing (missing required contact)
-        missing-str (missing-str missing)]
+        missing-str (missing-str missing)
+        accept-header (get headers "accept")]
     (cond
-      (empty? contact) {:status 422 }
+      (and (.contains (get headers "content-type") "text/plain") (string/blank? contact)) {:status 415}
+      (empty? contact) {:status 422}
       (not (empty? missing)) {:status 422 :body (json/write-str {:code 422 :message (str "Missing fields: " missing-str) :fields missing-str}) }
       :else
         (let [saved (save-contact (uuid) contact)]
@@ -54,8 +56,13 @@
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
-  (GET    "/contacts" {headers :headers} (get-contacts (headers "accept")))
-  (POST   "/contacts" req (post-contact (:body req) (get-in req [:headers "accept"])))
+  (GET    "/contacts" {headers :headers} (get-contacts (get headers "accept")))
+  (POST   "/contacts" {body :body headers :headers}
+    (cond
+      (= (str "class org.eclipse.jetty.server.HttpInput") (str (type body))) ;TODO write proper condition
+        (let [b (slurp body)]
+          (post-contact b headers))
+      :else (post-contact body headers)))
   (route/not-found "Invalid url"))
 
 (def app
