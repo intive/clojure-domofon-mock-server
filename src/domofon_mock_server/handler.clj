@@ -54,7 +54,7 @@
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
-  (GET    "/contacts" req (get-contacts (get-in req [:headers "accept"])))
+  (GET    "/contacts" {headers :headers} (get-contacts (headers "accept")))
   (POST   "/contacts" req (post-contact (:body req) (get-in req [:headers "accept"])))
   (route/not-found "Invalid url"))
 
