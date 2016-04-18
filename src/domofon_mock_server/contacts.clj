@@ -7,7 +7,7 @@
   (let [saved @saved-contacts]
     (cond
       (contains? saved id) (get saved id)
-      :else [] )))
+      :else nil )))
 
 (defn get-saved-contacts []
   (let [saved @saved-contacts]
@@ -32,3 +32,9 @@
 
 (defn delete-if-exists [id]
   (if (empty? (get-saved-contact id)) 404 (delete-saved-contact id)))
+
+(defn assoc-if-deputy-exists [contact contact-id deputy]
+  (if (contains? contact contact-id) (assoc-in contact [contact-id :deputy] deputy) contact))
+
+(defn add-deputy [contact-id deputy]
+  (swap! saved-contacts assoc-if-deputy-exists contact-id deputy))

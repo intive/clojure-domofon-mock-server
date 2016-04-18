@@ -53,6 +53,12 @@
 
 (defn delete-contact [id] {:status (delete-if-exists id)})
 
+(defn put-deputy [contact-id deputy]
+  (let [before (get-saved-contact contact-id)
+        swapped (add-deputy contact-id deputy)]
+    {:status (if (= before (get swapped contact-id)) 404 200)})  ;This could result in wrong status code
+  )
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
@@ -63,6 +69,7 @@
         (let [b (slurp body)]
           (post-contact b headers))
       :else (post-contact body headers)))
+  (PUT    "/contacts/:id/deputy" {{id :id} :params body :body} (put-deputy id body))
   (route/not-found "Invalid url"))
 
 (def app
