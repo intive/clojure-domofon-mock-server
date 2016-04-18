@@ -24,6 +24,19 @@
            :else  {:status 404} ))
     :else  {:status 400} ))
 
+(defn get-contact-deputy [id accept-header] ;TODO make it DRY
+  (cond
+    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+      (let [contact (get-saved-contact id)
+            deputy (:deputy contact)]
+          (cond
+            (not-empty deputy)
+              (cond
+                (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string deputy date-format)}
+                :else {:status 406} )
+            :else  {:status 404} ))
+    :else  {:status 400} ))
+
 (defn get-contacts [accept-header]
   (cond
     (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string (get-saved-contacts) date-format)}
@@ -53,11 +66,13 @@
 
 (defn delete-contact [id] {:status (delete-if-exists id)})
 
-(defn put-deputy [contact-id deputy]
-  (let [before (get-saved-contact contact-id)
-        swapped (add-deputy contact-id deputy)]
-    {:status (if (= before (get swapped contact-id)) 404 200)})  ;This could result in wrong status code
-  )
+(defn put-deputy [contact-id deputy accept-header]
+  (cond
+    (= accept-header "application/json")
+      (let [before (get-saved-contact contact-id)
+            swapped (add-deputy contact-id deputy)]
+        {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})  ;TODO This could result in wrong status code
+    :else {:status 406} ))
 
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
@@ -69,7 +84,8 @@
         (let [b (slurp body)]
           (post-contact b headers))
       :else (post-contact body headers)))
-  (PUT    "/contacts/:id/deputy" {{id :id} :params body :body} (put-deputy id body))
+  (PUT    "/contacts/:id/deputy" {{id :id} :params body :body headers :headers} (put-deputy id body (get headers "accept")))
+  (GET    "/contacts/:id/deputy" {{id :id} :params headers :headers} (get-contact-deputy id (get headers "accept")))
   (route/not-found "Invalid url"))
 
 (def app
