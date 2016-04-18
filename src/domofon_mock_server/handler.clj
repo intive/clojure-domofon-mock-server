@@ -74,6 +74,8 @@
         {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})  ;TODO This could result in wrong status code
     :else {:status 406} ))
 
+(defn delete-contact-deputy [contact-id] {:status (delete-deputy-if-exists contact-id)})
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
@@ -86,6 +88,7 @@
       :else (post-contact body headers)))
   (PUT    "/contacts/:id/deputy" {{id :id} :params body :body headers :headers} (put-deputy id body (get headers "accept")))
   (GET    "/contacts/:id/deputy" {{id :id} :params headers :headers} (get-contact-deputy id (get headers "accept")))
+  (DELETE "/contacts/:id/deputy" [id] (delete-contact-deputy id))
   (route/not-found "Invalid url"))
 
 (def app

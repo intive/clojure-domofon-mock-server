@@ -1,5 +1,6 @@
 (ns domofon-mock-server.contacts
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [medley.core :refer [dissoc-in]]))
 
 (def saved-contacts (atom {}))
 
@@ -38,3 +39,8 @@
 
 (defn add-deputy [contact-id deputy]
   (swap! saved-contacts assoc-if-deputy-exists contact-id deputy))
+
+(defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]) 200)
+
+(defn delete-deputy-if-exists [contact-id]
+  (if (empty? (get-saved-contact contact-id)) 404 (delete-deputy contact-id)))
