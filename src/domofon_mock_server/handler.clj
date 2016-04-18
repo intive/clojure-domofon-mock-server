@@ -37,6 +37,19 @@
             :else  {:status 404} ))
     :else  {:status 400} ))
 
+(defn get-important-from-contact [id accept-header] ;TODO make it DRY
+  (cond
+    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+      (let [contact (get-saved-contact id)
+            is-important (:isImportant contact)]
+            (cond
+              (not-empty contact)
+                (cond
+                  (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})}
+                  :else {:status 406} )
+              :else  {:status 404} ))
+    :else  {:status 400} ))
+
 (defn get-contacts [accept-header]
   (cond
     (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string (get-saved-contacts) date-format)}
@@ -66,7 +79,7 @@
 
 (defn delete-contact [id] {:status (delete-if-exists id)})
 
-(defn put-deputy [contact-id deputy accept-header]
+(defn put-contact-deputy [contact-id deputy accept-header]
   (cond
     (= accept-header "application/json")
       (let [before (get-saved-contact contact-id)
@@ -75,6 +88,24 @@
     :else {:status 406} ))
 
 (defn delete-contact-deputy [contact-id] {:status (delete-deputy-if-exists contact-id)})
+
+(defn put-contact-deputy [contact-id deputy-string accept-header]
+  (let [deputy (clojure.walk/keywordize-keys deputy-string)]
+    (cond
+      (= accept-header "application/json")
+        (let [before (get-saved-contact contact-id)
+              swapped (add-deputy contact-id deputy)]
+          {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})  ;TODO This could result in wrong status code
+      :else {:status 406} )))
+
+(defn put-important-contact [contact-id is-important-string accept-header]
+  (let [is-important (clojure.walk/keywordize-keys is-important-string)]
+    (cond
+      (= accept-header "application/json")
+        (let [before (get-saved-contact contact-id)
+              swapped (set-is-important contact-id (:isImportant is-important))]
+          {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})  ;TODO This could result in wrong status code
+      :else {:status 406} )))
 
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
@@ -86,9 +117,11 @@
         (let [b (slurp body)]
           (post-contact b headers))
       :else (post-contact body headers)))
-  (PUT    "/contacts/:id/deputy" {{id :id} :params body :body headers :headers} (put-deputy id body (get headers "accept")))
+  (PUT    "/contacts/:id/deputy" {{id :id} :params body :body headers :headers} (put-contact-deputy id body (get headers "accept")))
   (GET    "/contacts/:id/deputy" {{id :id} :params headers :headers} (get-contact-deputy id (get headers "accept")))
   (DELETE "/contacts/:id/deputy" [id] (delete-contact-deputy id))
+  (PUT    "/contacts/:id/important" {{id :id} :params body :body headers :headers} (put-important-contact id body (get headers "accept")))
+  (GET    "/contacts/:id/important" {{id :id} :params headers :headers} (get-important-from-contact id (get headers "accept")))
   (route/not-found "Invalid url"))
 
 (def app
