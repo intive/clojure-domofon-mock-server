@@ -1,8 +1,11 @@
 (ns domofon-mock-server.contacts
   (:require [clojure.string :as s]
-            [medley.core :refer [dissoc-in]]))
+            [medley.core :refer [dissoc-in]]
+            [clj-time.core :as t]
+            [clj-time.local :as lt]))
 
 (def saved-contacts (atom {}))
+(def last-notification (ref {}))
 
 (defn get-saved-contact [id]
   (let [saved @saved-contacts]
@@ -29,21 +32,39 @@
   (swap! saved-contacts assoc id (add-required-fields id contact))
   id)
 
-(defn delete-saved-contact [id] (swap! saved-contacts dissoc id) 200)
+(defn delete-saved-contact [id] (swap! saved-contacts dissoc id) 200) ;TODO DRY, remove http codes from here
 
 (defn delete-if-exists [id]
-  (if (empty? (get-saved-contact id)) 404 (delete-saved-contact id)))
+  (if (empty? (get-saved-contact id)) 404 (delete-saved-contact id))) ;TODO DRY, remove http codes from here
 
-(defn assoc-if-deputy-exists [contact contact-id my-key my-value]
+(defn assoc-if-key-exists [contact contact-id my-key my-value]
   (if (contains? contact contact-id) (assoc-in contact [contact-id my-key] my-value) contact))
 
 (defn add-deputy [contact-id deputy]
-  (swap! saved-contacts assoc-if-deputy-exists contact-id :deputy deputy))
+  (swap! saved-contacts assoc-if-key-exists contact-id :deputy deputy))
 
-(defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]) 200)
+(defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]) 200) ;TODO DRY, remove http codes from here
 
 (defn delete-deputy-if-exists [contact-id]
-  (if (empty? (get-saved-contact contact-id)) 404 (delete-deputy contact-id)))
+  (if (empty? (get-saved-contact contact-id)) 404 (delete-deputy contact-id))) ;TODO DRY, remove http codes from here
 
 (defn set-is-important [contact-id is-important]
-  (swap! saved-contacts assoc-if-deputy-exists contact-id :isImportant is-important))
+  (swap! saved-contacts assoc-if-key-exists contact-id :isImportant is-important))
+
+(defn notify-contact [id]
+  (if (get-saved-contact id)
+    (dosync
+      (let [last (get @last-notification id)
+            local-now (lt/local-now)
+            period (t/hours 1)]
+        (cond
+          (nil? last)
+            (do
+              (alter last-notification assoc id (t/plus local-now period))
+              [true (t/plus local-now period)])
+          (t/before? local-now (t/plus last period)) [false (t/plus local-now period)]
+          :else
+            (do
+              (alter last-notification assoc id (t/plus local-now period))
+              [true (t/plus local-now period)]))))
+  nil))

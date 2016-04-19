@@ -9,11 +9,13 @@
             [ring.util.response :refer [response]]
             [ring.middleware.json :as middleware]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
-            [ring.middleware.params :only [wrap-params]]))
+            [ring.middleware.params :only [wrap-params]]
+            [clj-time.coerce :as ct]))
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
 (def date-format {:date-format "yyyy-MM-dd"})
+(def date-time-format {:date-format "yyyy-MM-dd'T'HH:mm:ss"})
 
 (defn get-contact [id]
   (cond
@@ -86,13 +88,20 @@
   (let [deputy (clojure.walk/keywordize-keys deputy-string)]
     (let [before (get-saved-contact contact-id)
           swapped (add-deputy contact-id deputy)]
-          {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})))
+          {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))) ;TODO This could result in wrong status code
 
 (defn put-important-contact [contact-id is-important-string accept-header]
   (let [is-important (clojure.walk/keywordize-keys is-important-string)]
         (let [before (get-saved-contact contact-id)
               swapped (set-is-important contact-id (:isImportant is-important))]
           {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})))  ;TODO This could result in wrong status code
+
+(defn send-notification [id]
+  (let [notify (notify-contact id)]
+    (if (not (nil? notify))
+      (let [[send datetime] notify]
+        (if (= send true) "ok" {:status 429 :body (generate-string {:message "Try again later." :whenAllowed (ct/to-date datetime)} date-time-format) :headers {"Content-Type" "application/json"} }))
+        {:status 404})))
 
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
@@ -109,6 +118,7 @@
   (DELETE "/contacts/:id/deputy" [id] (delete-contact-deputy id))
   (PUT    "/contacts/:id/important" {{id :id} :params body :body headers :headers} (put-important-contact id body (get headers "accept")))
   (GET    "/contacts/:id/important" {{id :id} :params headers :headers} (get-important-from-contact id (get headers "accept")))
+  (POST   "/contacts/:id/notify" [id] (send-notification id))
   (route/not-found "Invalid url"))
 
 (def app

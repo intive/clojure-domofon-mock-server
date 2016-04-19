@@ -7,7 +7,8 @@
                  [compojure "1.4.0"]
                  [ring/ring-json "0.4.0"]
                  [ring/ring-defaults "0.1.5"]
-                 [medley "0.7.4"]]
+                 [medley "0.7.4"]
+                 [clj-time "0.11.0"]]
   :plugins [[lein-ring "0.9.7"]]
   :ring {:handler domofon-mock-server.handler/app}
   :profiles
