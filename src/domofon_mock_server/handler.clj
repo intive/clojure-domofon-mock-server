@@ -60,16 +60,22 @@
     (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string (get-saved-contacts) date-format)}
     :else {:status 406} ))
 
-(def required #{:name :notifyEmail})
+(def required-contact #{:name :notifyEmail})
 
 (defn missing [required available]
   (set/difference required (set (keys available))))
 
-(defn correct? [fields]
+(defn missing-resp [missing-str]
+  {:status 422 :body {:code 422 :message (str "Missing fields: " missing-str) :fields missing-str} :headers {"Content-Type" "application/json"} })
+
+(defn correct? [fields & {:keys [str-fields] :or {str-fields (count fields)}}]
   (let [corr (->> fields
                (filter string?)
                (filter not-empty))]
-    (= (count fields) (count corr))))
+    (= str-fields (count corr))))
+
+(defn incorrect-fields-resp [incorrect-fields]
+  {:status 422 :body {:code 422 :message (str "Incorrect fields: " incorrect-fields) :fields incorrect-fields} :headers {"Content-Type" "application/json"} })
 
 (defn correct-date-format? [date-string]
   (not (nil? (re-matches #"[0-9]{4}-[0-9]{2}-[0-9]{2}" date-string))))
@@ -85,21 +91,21 @@
            (not (t/after? (f/parse (f/formatters :date) fromDate) (f/parse (f/formatters :date) tillDate))))))
 
 (defn post-contact [contact headers]
-  (let [missing (missing required contact)
+  (let [missing (missing required-contact contact)
         missing-str (vec (map name missing))
         accept-header (get headers "accept")
         from (:fromDate contact)
         till (:tillDate contact)]
     (cond
       (and (.contains (get headers "content-type") "text/plain")
-           (string/blank? contact)) {:status 415}
-      (= (lazy-seq) contact) {:status 400}
+           (string/blank? contact)) {:status 415}  ;;moved
+      (= (lazy-seq) contact) {:status 400} ;;moved
       (or (empty? contact)
-          (not (correct? (vals contact)))) {:status 422}
+          (not (correct? (vals contact)))) (incorrect-fields-resp required-contact)
       (not (and (correct-date? from)
                 (correct-date? till))) {:status 422}
       (not (dates-in-order from till)) {:status 422}
-      (not (empty? missing)) {:status 422 :body (generate-string {:code 422 :message (str "Missing fields: " missing-str) :fields missing-str} date-format) :headers {"Content-Type" "application/json"} }
+      (not (empty? missing)) (missing-resp missing-str)
       :else
         (let [saved (save-contact (uuid) contact)]
           (cond
@@ -130,6 +136,26 @@
         (if (= send true) "ok" {:status 429 :body (generate-string {:message "Try again later." :whenAllowed (ct/to-date datetime)} date-time-format) :headers {"Content-Type" "application/json"} }))
         {:status 404})))
 
+(def required-categories #{:name :description :message})
+
+(defn post-categories [category headers]
+  (let [missing (missing required-categories category)
+        missing-str (vec (map name missing))
+        accept-header (get headers "accept")
+        auth-header (get headers "authorization")]
+    (cond
+      (or (nil? auth-header)
+          (not (= auth-header "Bearer super-secret"))) {:status 401}
+      (or (empty? category)
+          (not (correct? (vals category) :str-fields 3))) (incorrect-fields-resp required-categories)
+      (not (empty? missing)) (missing-resp missing-str)
+      :else
+        (let [saved (save-category (uuid) category)]
+          (cond
+            (= accept-header "application/json") {:body {:id saved}}
+            (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
+            :else {:status 415} )))))
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
@@ -146,12 +172,12 @@
   (PUT    "/contacts/:id/important" {{id :id} :params body :body-params headers :headers} (put-important-contact id body (get headers "accept")))
   (GET    "/contacts/:id/important" {{id :id} :params headers :headers} (get-important-from-contact id (get headers "accept")))
   (POST   "/contacts/:id/notify" [id] (send-notification id))
-  (POST   "/categories" [] {:status 200 :body {"id" "932f03fe-7600-4c5c-8f36-39df05505654"}})
+  (POST   "/categories" {body :body-params headers :headers} (post-categories body headers))
   (GET    "/categories" {:status 200 :body {}})
   (GET    "/categories/:id" [id] {:status 200 :body {}})
   (DELETE "/categories/:id" [id] {:status 200 :body {}})
   (POST   "/categories/:id/notify" [id] {:status 200 :body {}})
-  (GET    "/login" [] {:status 200 :body {}})
+  (GET    "/login" [] {:status 200 :body "super-secret"})
   (route/not-found "Invalid url"))
 
 (defn norm-uri [handler]
@@ -170,9 +196,24 @@
           (println marker "response: " response)
           response))))
 
+(defn reject-wrong-req [handler]
+  (fn [request]
+    (let [content (get-in request [:headers "content-type"])
+          body (:body-params request)]
+      (cond
+        (and (not (nil? content))
+                 (.contains content "text/plain")
+                 (string/blank? body)) {:status 415}
+        (= (lazy-seq) body) {:status 400}
+        (and (map? body)
+             (empty? body)) {:status 422}
+        :else (handler request)
+    ))))
+
 (def handler
   (-> app-routes
 ;;       (print-req-resp "INNER")
+      (reject-wrong-req)
       (norm-uri)
       (wrap-restful-format :formats [:json-kw])
       (wrap-defaults api-defaults)

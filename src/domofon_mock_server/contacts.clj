@@ -6,6 +6,7 @@
 
 (def saved-contacts (atom {}))
 (def last-notification (ref {}))
+(def saved-categories (atom {}))
 
 (defn get-saved-contact [id]
   (let [saved @saved-contacts]
@@ -21,7 +22,7 @@
 
 (defn now [] (new java.util.Date))
 
-(defn add-required-fields [id contact]
+(defn add-required-contact-fields [id contact]
   (cond-> contact
     true (assoc :id id)
     (not (contains? contact :adminEmail)) (assoc :adminEmail (:notifyEmail contact))
@@ -29,7 +30,7 @@
     (not (contains? contact :fromDate)) (assoc :fromDate (now))))
 
 (defn save-contact [id contact]
-  (swap! saved-contacts assoc id (add-required-fields id contact))
+  (swap! saved-contacts assoc id (add-required-contact-fields id contact))
   id)
 
 (defn delete-saved-contact [id] (swap! saved-contacts dissoc id) 200) ;TODO DRY, remove http codes from here
@@ -68,3 +69,12 @@
               (alter last-notification assoc id (t/plus local-now period))
               [true (t/plus local-now period)]))))
   nil))
+
+(defn add-required-category-fields [id category]
+  (cond-> category
+    true (assoc :id id)
+    (not (contains? category :isIndividual)) (assoc :isIndividual false)))
+
+(defn save-category [id category]
+  (swap! saved-categories assoc id (add-required-category-fields id category))
+  id)
