@@ -8,9 +8,6 @@
                  [ring/ring-json "0.4.0"]
                  [ring/ring-defaults "0.1.5"]
                  [medley "0.7.4"]
-                 [clj-time "0.11.0"]]
-  :plugins [[lein-ring "0.9.7"]]
-  :ring {:handler domofon-mock-server.handler/app}
-  :profiles
-  {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                        [ring/ring-mock "0.3.0"]]}})
+                 [clj-time "0.11.0"]
+                 [aleph "0.4.1-beta5"]]
+  :main domofon-mock-server.handler)

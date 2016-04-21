@@ -1,16 +1,16 @@
 (ns domofon-mock-server.handler
   (:use domofon-mock-server.contacts)
-  (:require [cheshire.core :refer :all]
+  (:require [aleph.http :as http]
+            [cheshire.core :refer :all]
             [clojure.walk :as walk]
             [clojure.set :as set]
             [clojure.string :as string]
             [compojure.core :refer :all]
             [compojure.route :as route]
-            [ring.util.response :refer [response]]
             [ring.middleware.json :as middleware]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
-            [ring.middleware.params :only [wrap-params]]
-            [clj-time.coerce :as ct]))
+            [clj-time.coerce :as ct])
+  (:gen-class))
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
@@ -109,7 +109,7 @@
   (GET    "/contacts" {headers :headers} (get-contacts (get headers "accept")))
   (POST   "/contacts" {body :body headers :headers}
     (cond
-      (= (str "class org.eclipse.jetty.server.HttpInput") (str (type body))) ;TODO write proper condition
+      (= (str "class java.io.ByteArrayInputStream") (str (type body))) ;TODO write proper condition -> (instance?
         (let [b (slurp body)]
           (post-contact b headers))
       :else (post-contact body headers)))
@@ -121,7 +121,30 @@
   (POST   "/contacts/:id/notify" [id] (send-notification id))
   (route/not-found "Invalid url"))
 
-(def app
+(defn norm-uri [handler]
+  (fn [request]
+      (let [host-port (str (:server-name request) ":" (:server-port request))]
+        (if (.contains (:uri request) host-port)
+          (let [absolute-prefix (str (name (:scheme request)) "://" host-port)]
+            (handler (assoc request :uri (clojure.string/replace (:uri request) absolute-prefix ""))))
+          (handler request)))))
+
+(defn print-req [handler marker]
+  (fn [request]
+      (let [response (handler request)]
+        (do
+          (println marker "request: " request)
+          response))))
+
+(def handler
   (-> app-routes
-    (middleware/wrap-json-body)
-    (wrap-defaults api-defaults)))
+;;       (print-req "INNER")
+      (norm-uri)
+      (middleware/wrap-json-body)
+      (wrap-defaults api-defaults)))
+
+(defn -main
+  [& args]
+  (let [port 5555]
+    (println "Starting domofon-mock server on port " port)
+    (http/start-server handler {:port port})))
