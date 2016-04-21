@@ -113,7 +113,7 @@
             (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
             :else {:status 415} )))))
 
-(defn delete-contact [id] {:status (delete-if-exists id)})
+(defn delete-contact [id] {:status (delete-contact-if-exists id)})
 
 (defn delete-contact-deputy [contact-id] {:status (delete-deputy-if-exists contact-id)})
 
@@ -170,6 +170,8 @@
            :else  {:status 404} ))
     :else  {:status 400} ))
 
+(defn delete-category [id] {:status (delete-category-if-exists id)})
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
@@ -189,7 +191,7 @@
   (POST   "/categories" {body :body-params headers :headers} (post-categories body headers))
   (GET    "/categories" {headers :headers} (get-categories (get headers "accept")))
   (GET    "/categories/:id" [id] (get-category id))
-  (DELETE "/categories/:id" [id] {:status 200 :body {}})
+  (DELETE "/categories/:id" [id] (delete-category id))
   (POST   "/categories/:id/notify" [id] {:status 200 :body {}})
   (GET    "/login" [] {:status 200 :body "super-secret"})
   (route/not-found "Invalid url"))

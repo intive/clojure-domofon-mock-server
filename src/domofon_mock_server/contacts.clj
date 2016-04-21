@@ -35,7 +35,7 @@
 
 (defn delete-saved-contact [id] (swap! saved-contacts dissoc id) 200) ;TODO DRY, remove http codes from here
 
-(defn delete-if-exists [id]
+(defn delete-contact-if-exists [id]
   (if (empty? (get-saved-contact id)) 404 (delete-saved-contact id))) ;TODO DRY, remove http codes from here
 
 (defn assoc-if-key-exists [contact contact-id my-key my-value]
@@ -91,3 +91,8 @@
     (cond
       (contains? saved id) (get saved id)
       :else nil)))
+
+(defn delete-saved-category [id] (swap! saved-categories dissoc id) 200) ;TODO DRY, remove http codes from here
+
+(defn delete-category-if-exists [id]
+  (if (empty? (get-saved-category id)) 404 (delete-saved-category id))) ;TODO DRY, remove http codes from here
