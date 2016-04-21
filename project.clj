@@ -5,7 +5,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [cheshire "5.6.1"]
                  [compojure "1.4.0"]
-                 [ring/ring-json "0.4.0"]
+                 [ring-middleware-format "0.7.0"]
                  [ring/ring-defaults "0.1.5"]
                  [medley "0.7.4"]
                  [clj-time "0.11.0"]
