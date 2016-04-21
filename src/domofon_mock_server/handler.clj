@@ -9,7 +9,9 @@
             [compojure.route :as route]
             [ring.middleware.format :refer [wrap-restful-format]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
-            [clj-time.coerce :as ct])
+            [clj-time.coerce :as ct]
+            [clj-time.core :as t]
+            [clj-time.format :as f])
   (:gen-class))
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
@@ -69,14 +71,34 @@
                (filter not-empty))]
     (= (count fields) (count corr))))
 
+(defn correct-date-format? [date-string]
+  (not (nil? (re-matches #"[0-9]{4}-[0-9]{2}-[0-9]{2}" date-string))))
+
+(defn correct-date? [date]
+  (or (nil? date)
+      (and (not (nil? date))
+           (correct-date-format? date))))
+
+(defn dates-in-order [fromDate tillDate]
+  (or (nil? tillDate)
+      (and (not (or (nil? fromDate) (nil? tillDate)))
+           (not (t/after? (f/parse (f/formatters :date) fromDate) (f/parse (f/formatters :date) tillDate))))))
+
 (defn post-contact [contact headers]
   (let [missing (missing required contact)
         missing-str (vec (map name missing))
-        accept-header (get headers "accept")]
+        accept-header (get headers "accept")
+        from (:fromDate contact)
+        till (:tillDate contact)]
     (cond
-      (and (.contains (get headers "content-type") "text/plain") (string/blank? contact)) {:status 415}
+      (and (.contains (get headers "content-type") "text/plain")
+           (string/blank? contact)) {:status 415}
       (= (lazy-seq) contact) {:status 400}
-      (or (empty? contact) (not (correct? (vals contact)))) {:status 422}
+      (or (empty? contact)
+          (not (correct? (vals contact)))) {:status 422}
+      (not (and (correct-date? from)
+                (correct-date? till))) {:status 422}
+      (not (dates-in-order from till)) {:status 422}
       (not (empty? missing)) {:status 422 :body (generate-string {:code 422 :message (str "Missing fields: " missing-str) :fields missing-str} date-format) :headers {"Content-Type" "application/json"} }
       :else
         (let [saved (save-contact (uuid) contact)]
@@ -129,6 +151,7 @@
   (GET    "/categories/:id" [id] {:status 200 :body {}})
   (DELETE "/categories/:id" [id] {:status 200 :body {}})
   (POST   "/categories/:id/notify" [id] {:status 200 :body {}})
+  (GET    "/login" [] {:status 200 :body {}})
   (route/not-found "Invalid url"))
 
 (defn norm-uri [handler]
