@@ -161,6 +161,15 @@
     (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (get-saved-categories)}
     :else {:status 406} ))
 
+(defn get-category [id]
+  (cond
+    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+      (let [res (get-saved-category id)]
+          (cond
+           (not-empty res) {:headers {"Content-Type" "application/json"} :body res}
+           :else  {:status 404} ))
+    :else  {:status 400} ))
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
@@ -179,7 +188,7 @@
   (POST   "/contacts/:id/notify" [id] (send-notification id))
   (POST   "/categories" {body :body-params headers :headers} (post-categories body headers))
   (GET    "/categories" {headers :headers} (get-categories (get headers "accept")))
-  (GET    "/categories/:id" [id] {:status 200 :body {}})
+  (GET    "/categories/:id" [id] (get-category id))
   (DELETE "/categories/:id" [id] {:status 200 :body {}})
   (POST   "/categories/:id/notify" [id] {:status 200 :body {}})
   (GET    "/login" [] {:status 200 :body "super-secret"})
