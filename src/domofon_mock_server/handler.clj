@@ -129,16 +129,17 @@
             (handler (assoc request :uri (clojure.string/replace (:uri request) absolute-prefix ""))))
           (handler request)))))
 
-(defn print-req [handler marker]
+(defn print-req-resp [handler marker]
   (fn [request]
-      (let [response (handler request)]
-        (do
-          (println marker "request: " request)
+      (do
+        (println marker "request: " request)
+        (let [response (handler request)]
+          (println marker "response: " response)
           response))))
 
 (def handler
   (-> app-routes
-;;       (print-req "INNER")
+;;       (print-req-res "INNER")
       (norm-uri)
       (middleware/wrap-json-body)
       (wrap-defaults api-defaults)))
