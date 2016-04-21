@@ -95,17 +95,16 @@
         missing-str (vec (map name missing))
         accept-header (get headers "accept")
         from (:fromDate contact)
-        till (:tillDate contact)]
+        till (:tillDate contact)
+        category (:category contact)]
     (cond
-      (and (.contains (get headers "content-type") "text/plain")
-           (string/blank? contact)) {:status 415}  ;;moved
-      (= (lazy-seq) contact) {:status 400} ;;moved
       (or (empty? contact)
           (not (correct? (vals contact)))) (incorrect-fields-resp required-contact)
       (not (and (correct-date? from)
                 (correct-date? till))) {:status 422}
       (not (dates-in-order from till)) {:status 422}
       (not (empty? missing)) (missing-resp missing-str)
+      (nil? (get-saved-category category)) {:status 422}
       :else
         (let [saved (save-contact (uuid) contact)]
           (cond
