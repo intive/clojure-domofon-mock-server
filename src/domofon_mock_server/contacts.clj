@@ -5,8 +5,9 @@
             [clj-time.local :as lt]))
 
 (def saved-contacts (atom {}))
-(def last-notification (ref {}))
+(def last-contact-notification (ref {}))
 (def saved-categories (atom {}))
+(def last-category-notification (ref {}))
 
 (defn get-saved-contact [id]
   (let [saved @saved-contacts]
@@ -55,18 +56,18 @@
 (defn notify-contact [id]
   (if (get-saved-contact id)
     (dosync
-      (let [last (get @last-notification id)
+      (let [last (get @last-contact-notification id)
             local-now (lt/local-now)
             period (t/hours 1)]
         (cond
           (nil? last)
             (do
-              (alter last-notification assoc id (t/plus local-now period))
+              (alter last-contact-notification assoc id (t/plus local-now period))
               [true (t/plus local-now period)])
           (t/before? local-now (t/plus last period)) [false (t/plus local-now period)]
           :else
             (do
-              (alter last-notification assoc id (t/plus local-now period))
+              (alter last-contact-notification assoc id (t/plus local-now period))
               [true (t/plus local-now period)]))))
   nil))
 
@@ -96,3 +97,21 @@
 
 (defn delete-category-if-exists [id]
   (if (empty? (get-saved-category id)) 404 (delete-saved-category id))) ;TODO DRY, remove http codes from here
+
+(defn notify-category [id]
+  (if (get-saved-category id)
+    (dosync
+      (let [last (get @last-category-notification id)
+            local-now (lt/local-now)
+            period (t/hours 1)]
+        (cond
+          (nil? last)
+            (do
+              (alter last-category-notification assoc id (t/plus local-now period))
+              [true (t/plus local-now period)])
+          (t/before? local-now (t/plus last period)) [false (t/plus local-now period)]
+          :else
+            (do
+              (alter last-category-notification assoc id (t/plus local-now period))
+              [true (t/plus local-now period)]))))
+  nil))

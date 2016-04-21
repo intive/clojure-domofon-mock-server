@@ -109,19 +109,33 @@
       :else
         (let [saved (save-contact (uuid) contact)]
           (cond
-            (= accept-header "application/json") {:body {:id saved}}
+            (= accept-header "application/json") {:body {:id saved :secret (uuid)}}
             (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
             :else {:status 415} )))))
 
-(defn delete-contact [id] {:status (delete-contact-if-exists id)})
+(defn correct-login? [auth-header]
+  (and (not (nil? auth-header))
+           (or (= auth-header "Bearer super-secret")
+               (= auth-header "Basic YWRtaW46UDRzc3cwcmQ="))))
 
-(defn delete-contact-deputy [contact-id] {:status (delete-deputy-if-exists contact-id)})
+(defn delete-contact [id auth-header]
+  (if (correct-login? auth-header)
+    {:status (delete-contact-if-exists id)}
+    {:status 401}))
 
-(defn put-contact-deputy [contact-id deputy-string accept-header]
-  (let [deputy (clojure.walk/keywordize-keys deputy-string)]
-    (let [before (get-saved-contact contact-id)
-          swapped (add-deputy contact-id deputy)]
-          {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))) ;TODO This could result in wrong status code
+(defn delete-contact-deputy [contact-id auth-header]
+  (if (correct-login? auth-header)
+    {:status (delete-deputy-if-exists contact-id)}
+    {:status 401}))
+
+(defn put-contact-deputy [contact-id deputy-string accept-header auth-header]
+  (if (correct-login? auth-header)
+    (let [deputy (clojure.walk/keywordize-keys deputy-string)]
+      (let [before (get-saved-contact contact-id)
+            swapped (add-deputy contact-id deputy)]
+            {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))
+    {:status 401}
+    )) ;TODO This could result in wrong status code
 
 (defn put-important-contact [contact-id is-important-string accept-header]
   (let [is-important (clojure.walk/keywordize-keys is-important-string)]
@@ -129,7 +143,7 @@
               swapped (set-is-important contact-id (:isImportant is-important))]
           {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})))  ;TODO This could result in wrong status code
 
-(defn send-notification [id]
+(defn send-contact-notification [id]
   (let [notify (notify-contact id)]
     (if (not (nil? notify))
       (let [[send datetime] notify]
@@ -172,9 +186,21 @@
 
 (defn delete-category [id] {:status (delete-category-if-exists id)})
 
+(defn send-category-notification [id]
+  (let [notify (notify-category id)]
+    (if (not (nil? notify))
+      (let [[send datetime] notify]
+        (if (= send true) "ok" {:status 429 :body {:message "Try again later." :whenAllowed (ct/to-date datetime)} :headers {"Content-Type" "application/json"} }))
+      {:status 404})))
+
+(defn login [auth-header]
+  (if (correct-login? auth-header)
+    {:status 200 :body "super-secret"}
+    {:status 401}))
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
-  (DELETE "/contacts/:id" [id] (delete-contact id))
+  (DELETE "/contacts/:id" {{id :id} :params headers :headers} (delete-contact id (get headers "authorization")))
   (GET    "/contacts" {headers :headers} (get-contacts (get headers "accept")))
   (POST   "/contacts" {body :body-params headers :headers}
     (cond
@@ -182,18 +208,18 @@
         (let [b (slurp body)]
           (post-contact b headers))
       :else (post-contact body headers)))
-  (PUT    "/contacts/:id/deputy" {{id :id} :params body :body-params headers :headers} (put-contact-deputy id body (get headers "accept")))
+  (PUT    "/contacts/:id/deputy" {{id :id} :params body :body-params headers :headers} (put-contact-deputy id body (get headers "accept") (get headers "authorization")))
   (GET    "/contacts/:id/deputy" {{id :id} :params headers :headers} (get-contact-deputy id (get headers "accept")))
-  (DELETE "/contacts/:id/deputy" [id] (delete-contact-deputy id))
+  (DELETE "/contacts/:id/deputy" {{id :id} :params headers :headers} (delete-contact-deputy id (get headers "authorization")))
   (PUT    "/contacts/:id/important" {{id :id} :params body :body-params headers :headers} (put-important-contact id body (get headers "accept")))
   (GET    "/contacts/:id/important" {{id :id} :params headers :headers} (get-important-from-contact id (get headers "accept")))
-  (POST   "/contacts/:id/notify" [id] (send-notification id))
+  (POST   "/contacts/:id/notify" [id] (send-contact-notification id))
   (POST   "/categories" {body :body-params headers :headers} (post-categories body headers))
   (GET    "/categories" {headers :headers} (get-categories (get headers "accept")))
   (GET    "/categories/:id" [id] (get-category id))
   (DELETE "/categories/:id" [id] (delete-category id))
-  (POST   "/categories/:id/notify" [id] {:status 200 :body {}})
-  (GET    "/login" [] {:status 200 :body "super-secret"})
+  (POST   "/categories/:id/notify" [id] (send-category-notification id))
+  (GET    "/login" {headers :headers} (login (get headers "authorization")))
   (route/not-found "Invalid url"))
 
 (defn norm-uri [handler]
