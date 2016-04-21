@@ -129,19 +129,58 @@
             (handler (assoc request :uri (clojure.string/replace (:uri request) absolute-prefix ""))))
           (handler request)))))
 
-(defn print-req [handler marker]
+(defn print-req-resp [handler marker]
   (fn [request]
-      (let [response (handler request)]
-        (do
-          (println marker "request: " request)
+      (do
+        (println marker "request: " request)
+        (let [response (handler request)]
+          (println marker "response: " response)
           response))))
+
+(defn reject-malformed-json [handler]
+  (fn [request]
+    (do
+      (println "in reject ... ")
+    (if (= (get-in request [:headers "content-type"]) "application/json")
+      (try
+        (do
+          (println "in try ...")
+        (parse-string (:body request))
+        (handler request))
+        (catch com.fasterxml.jackson.core.JsonParseException e (do
+                                                                 (println "catched ... " e)
+                                                                 {:status 422 :body "wrong json"})))
+      (handler request)))))
+
+(defn read-body-stream [handler]
+  (fn [request]
+    (let [body (:body request)]
+      (if (= (str "class java.io.ByteArrayInputStream") (str (type body)))
+        (handler (assoc request :body (slurp body)))
+        (handler request)))))
+
+(defn req-body-to-json [handler]
+  (fn [request]
+    (if (= (get-in request [:headers "content-type"]) "application/json")
+      (handler (assoc request :body (parse-string (:body request) true)))
+      (handler request))))
 
 (def handler
   (-> app-routes
-;;       (print-req "INNER")
+      (print-req-resp "INNER")
       (norm-uri)
-      (middleware/wrap-json-body)
-      (wrap-defaults api-defaults)))
+;;       (print-req-resp "AFTER WRAP-JSON-BODY")
+;;       (middleware/wrap-json-body)
+      (print-req-resp "AFTER BODY TO JSON")
+      (req-body-to-json)
+      (print-req-resp "AFTER REJECT JSON")
+      (reject-malformed-json)
+      (print-req-resp "AFTER READ STREAM")
+      (read-body-stream)
+      (print-req-resp "AFTER WRAP")
+      (wrap-defaults api-defaults)
+      (print-req-resp "OUTER")
+      ))
 
 (defn -main
   [& args]
