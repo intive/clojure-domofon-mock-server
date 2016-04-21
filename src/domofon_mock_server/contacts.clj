@@ -73,8 +73,21 @@
 (defn add-required-category-fields [id category]
   (cond-> category
     true (assoc :id id)
+    true (assoc :messages [(:message category)])
     (not (contains? category :isIndividual)) (assoc :isIndividual false)))
 
 (defn save-category [id category]
   (swap! saved-categories assoc id (add-required-category-fields id category))
   id)
+
+(defn get-saved-categories []
+  (let [saved @saved-categories]
+    (cond
+      (empty? saved) []
+      :else (vals saved))))
+
+(defn get-saved-category [id]
+  (let [saved @saved-categories]
+    (cond
+      (contains? saved id) (get saved id)
+      :else nil)))

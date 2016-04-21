@@ -156,6 +156,11 @@
             (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
             :else {:status 415} )))))
 
+(defn get-categories [accept-header]
+  (cond
+    (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (get-saved-categories)}
+    :else {:status 406} ))
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" [id] (delete-contact id))
@@ -173,7 +178,7 @@
   (GET    "/contacts/:id/important" {{id :id} :params headers :headers} (get-important-from-contact id (get headers "accept")))
   (POST   "/contacts/:id/notify" [id] (send-notification id))
   (POST   "/categories" {body :body-params headers :headers} (post-categories body headers))
-  (GET    "/categories" {:status 200 :body {}})
+  (GET    "/categories" {headers :headers} (get-categories (get headers "accept")))
   (GET    "/categories/:id" [id] {:status 200 :body {}})
   (DELETE "/categories/:id" [id] {:status 200 :body {}})
   (POST   "/categories/:id/notify" [id] {:status 200 :body {}})
