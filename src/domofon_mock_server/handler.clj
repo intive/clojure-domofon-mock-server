@@ -124,6 +124,11 @@
   (PUT    "/contacts/:id/important" {{id :id} :params body :body-params headers :headers} (put-important-contact id body (get headers "accept")))
   (GET    "/contacts/:id/important" {{id :id} :params headers :headers} (get-important-from-contact id (get headers "accept")))
   (POST   "/contacts/:id/notify" [id] (send-notification id))
+  (POST   "/categories" [] {:status 200 :body {"id" "932f03fe-7600-4c5c-8f36-39df05505654"}})
+  (GET    "/categories" {:status 200 :body {}})
+  (GET    "/categories/:id" [id] {:status 200 :body {}})
+  (DELETE "/categories/:id" [id] {:status 200 :body {}})
+  (POST   "/categories/:id/notify" [id] {:status 200 :body {}})
   (route/not-found "Invalid url"))
 
 (defn norm-uri [handler]
