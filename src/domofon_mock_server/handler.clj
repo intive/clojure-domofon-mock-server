@@ -114,39 +114,49 @@
       :else
         (let [saved (save-contact (uuid) contact)]
           (cond
-            (= accept-header "application/json") {:body {:id saved :secret (uuid)}}
+            (= accept-header "application/json") {:body {:id saved :secret "50d1745b-f4a3-492a-951e-68e944768e9a"}}
             (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
             :else {:status 415} )))))
 
 (defn correct-login? [auth-header]
   (and (not (nil? auth-header))
            (or (= auth-header "Bearer super-secret")
+               (= auth-header "Bearer 50d1745b-f4a3-492a-951e-68e944768e9a")
                (= auth-header "Basic YWRtaW46UDRzc3cwcmQ="))))
 
 (defn delete-contact [id auth-header]
-  (if (correct-login? auth-header)
-    {:status (delete-contact-if-exists id)}
-    {:status 401}))
+  (cond
+    (nil? (get-saved-contact id)) {:status 404}
+    (correct-login? auth-header) {:status (delete-contact-if-exists id)}
+    :else {:status 401}))
 
 (defn delete-contact-deputy [contact-id auth-header]
-  (if (correct-login? auth-header)
-    {:status (delete-deputy-if-exists contact-id)}
-    {:status 401}))
+  (cond
+    (nil? (get-saved-contact contact-id)) {:status 404}
+    (correct-login? auth-header) {:status (delete-deputy-if-exists contact-id)}
+    :else {:status 401}))
 
 (defn put-contact-deputy [contact-id deputy-string accept-header auth-header]
-  (if (correct-login? auth-header)
-    (let [deputy (clojure.walk/keywordize-keys deputy-string)]
-      (let [before (get-saved-contact contact-id)
-            swapped (add-deputy contact-id deputy)]
-            {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))
-    {:status 401}
-    )) ;TODO This could result in wrong status code
+  (cond
+    (nil? (get-saved-contact contact-id)) {:status 404}
+    (correct-login? auth-header)
+      (let [deputy (clojure.walk/keywordize-keys deputy-string)]
+        (let [before (get-saved-contact contact-id)
+              swapped (add-deputy contact-id deputy)]
+              {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))
+    :else {:status 401})) ;TODO This could result in wrong status code
 
 (defn put-important-contact [contact-id is-important-string accept-header]
-  (let [is-important (clojure.walk/keywordize-keys is-important-string)]
-        (let [before (get-saved-contact contact-id)
-              swapped (set-is-important contact-id (:isImportant is-important))]
-          {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})))  ;TODO This could result in wrong status code
+  (let [is-important (clojure.walk/keywordize-keys is-important-string)
+        imp (:isImportant is-important)]
+    (if (or (number? imp)
+            (string? imp)
+            (and (map? imp)
+                 (empty? imp)))
+      {:status 422}
+      (let [before (get-saved-contact contact-id)
+            swapped (set-is-important contact-id (:isImportant is-important))]
+        {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))))  ;TODO This could result in wrong status code
 
 (defn send-contact-notification [id]
   (let [notify (notify-contact id)]
@@ -192,11 +202,17 @@
 (defn delete-category [id] {:status (delete-category-if-exists id)})
 
 (defn send-category-notification [id]
-  (let [notify (notify-category id)]
-    (if (not (nil? notify))
-      (let [[send datetime] notify]
-        (if (= send true) "ok" {:status 429 :body {:message "Try again later." :whenAllowed (ct/to-date datetime)} :headers {"Content-Type" "application/json"} }))
-      {:status 404})))
+    (let [notify (notify-category id)
+          cat (get-saved-category id)]
+      (cond
+        (nil? notify) {:status 404}
+        (nil? cat) {:status 400}
+        (:isIndividual cat) {:status 400}
+        :else (let [[send datetime] notify]
+                (if (= send true)
+                  "ok"
+                  {:status 429 :body (generate-string {:message "Try again later." :whenAllowed (ct/to-date datetime)} date-time-format) :headers {"Content-Type" "application/json"} })))))
+
 
 (defn login [auth-header]
   (if (correct-login? auth-header)
@@ -259,7 +275,7 @@
 
 (def handler
   (-> app-routes
-      (print-req-resp "INNER")
+;;       (print-req-resp "INNER")
       (reject-wrong-req)
       (norm-uri)
       (wrap-restful-format :formats [:json-kw])
