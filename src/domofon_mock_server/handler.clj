@@ -24,7 +24,7 @@
     (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
       (let [res (get-saved-contact id)]
           (cond
-           (not-empty res) {:headers {"Content-Type" "application/json"} :body (generate-string res date-format)}
+           (not-empty res) {:headers {"Content-Type" "application/json"} :body (generate-string (dissoc res :message) date-format)}
            :else  {:status 404} ))
     :else  {:status 400} ))
 
@@ -219,6 +219,27 @@
     {:status 200 :body "super-secret"}
     {:status 401}))
 
+(defn put-contact-message [contact-id message accept-header]
+  (let [swapped (add-message contact-id message)]
+    (cond
+      (nil? (get-saved-contact contact-id)) {:status 404}
+      (= accept-header "application/json") {:status 200 :body {:status "OK"} :headers {"Content-Type" "application/json"}}
+      (= accept-header "text/plain") {:status 200 :body "OK"}
+      :else {:status 200 :body "OK"} )))
+
+(defn get-contact-message [id accept-header] ;TODO make it DRY
+  (cond
+    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+      (let [contact (get-saved-contact id)
+            message (:message contact)]
+          (cond
+            (not-empty message)
+              (cond
+                (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body {:status "OK"}}
+                :else {:body message} )
+            :else  {:status 404} ))
+    :else  {:status 400} ))
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" {{id :id} :params headers :headers} (delete-contact id (get headers "authorization")))
@@ -232,6 +253,8 @@
   (PUT    "/contacts/:id/deputy" {{id :id} :params body :body-params headers :headers} (put-contact-deputy id body (get headers "accept") (get headers "authorization")))
   (GET    "/contacts/:id/deputy" {{id :id} :params headers :headers} (get-contact-deputy id (get headers "accept")))
   (DELETE "/contacts/:id/deputy" {{id :id} :params headers :headers} (delete-contact-deputy id (get headers "authorization")))
+  (PUT    "/contacts/:id/message" {{id :id} :params body :body-params headers :headers} (put-contact-message id body (get headers "accept")))
+  (GET    "/contacts/:id/message" {{id :id} :params headers :headers} (get-contact-message id (get headers "accept")))
   (PUT    "/contacts/:id/important" {{id :id} :params body :body-params headers :headers} (put-important-contact id body (get headers "accept")))
   (GET    "/contacts/:id/important" {{id :id} :params headers :headers} (get-important-from-contact id (get headers "accept")))
   (POST   "/contacts/:id/notify" [id] (send-contact-notification id))

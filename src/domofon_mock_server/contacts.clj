@@ -28,7 +28,8 @@
     true (assoc :id id)
     (not (contains? contact :adminEmail)) (assoc :adminEmail (:notifyEmail contact))
     (not (contains? contact :isImportant)) (assoc :isImportant false)
-    (not (contains? contact :fromDate)) (assoc :fromDate (now))))
+    (not (contains? contact :fromDate)) (assoc :fromDate (now))
+    (not (contains? contact :message)) (assoc :message "Paczka przyszła.")))
 
 (defn save-contact [id contact]
   (swap! saved-contacts assoc id (add-required-contact-fields id contact))
@@ -44,6 +45,9 @@
 
 (defn add-deputy [contact-id deputy]
   (swap! saved-contacts assoc-if-key-exists contact-id :deputy deputy))
+
+(defn add-message [contact-id message]
+  (swap! saved-contacts assoc-if-key-exists contact-id :message message))
 
 (defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]) 200) ;TODO DRY, remove http codes from here
 
