@@ -55,9 +55,15 @@
               :else  {:status 404} ))
     :else  {:status 400} ))
 
-(defn get-contacts [accept-header]
+(defn get-contacts [accept-header query-category]
   (cond
-    (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string (get-saved-contacts) date-format)}
+    (and (not (nil? query-category))
+         (nil? (get-saved-category query-category))) {:status 400}
+    (= accept-header "application/json") {:headers {"Content-Type" "application/json"}
+                                          :body (generate-string  (if (nil? query-category)
+                                                                    (get-saved-contacts)
+                                                                    (filter (fn [c] (= query-category (:category c))) (get-saved-contacts)))
+                                                                  date-format)}
     :else {:status 406} ))
 
 (def required-contact #{:name :notifyEmail})
@@ -200,7 +206,7 @@
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" {{id :id} :params headers :headers} (delete-contact id (get headers "authorization")))
-  (GET    "/contacts" {headers :headers} (get-contacts (get headers "accept")))
+  (GET    "/contacts" {headers :headers query :query-params} (get-contacts (get headers "accept") (get query "category")))
   (POST   "/contacts" {body :body-params headers :headers}
     (cond
       (= (str "class java.io.ByteArrayInputStream") (str (type body))) ;TODO write proper condition -> (instance?
@@ -253,7 +259,7 @@
 
 (def handler
   (-> app-routes
-;;       (print-req-resp "INNER")
+      (print-req-resp "INNER")
       (reject-wrong-req)
       (norm-uri)
       (wrap-restful-format :formats [:json-kw])
