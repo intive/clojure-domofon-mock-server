@@ -7,11 +7,14 @@
             [clojure.string :as string]
             [compojure.core :refer :all]
             [compojure.route :as route]
+            [compojure.response :refer [Renderable]]
             [ring.middleware.format :refer [wrap-restful-format]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [clj-time.coerce :as ct]
             [clj-time.core :as t]
-            [clj-time.format :as f])
+            [clj-time.format :as f]
+            [clj-time.local :as lt]
+            [manifold.stream :as s])
   (:gen-class))
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
@@ -218,7 +221,21 @@
     {:status 200 :body "super-secret"}
     {:status 401}))
 
+;; (extend-protocol Renderable
+;;   manifold.deferred.Deferred
+;;   (render [d _] d))
+
+;; (defn streaming-numbers-handler
+;;   []
+;;   (let [cnt 50]
+;;     {:status 200
+;;      :headers {"content-type" "text/event-stream"}
+;;      :body (let [sent (atom 0)]
+;;              (->> (s/periodically 100 #(str (generate-string {:updatedAt (f/unparse (f/formatters :date-time) (lt/local-now))} date-time-format) "\n"))
+;;                   (s/transform (take cnt))))}))
+
 (defroutes app-routes
+;;   (GET    "/contacts/sse" [] (streaming-numbers-handler))
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" {{id :id} :params headers :headers} (delete-contact id (get headers "authorization")))
   (GET    "/contacts" {headers :headers query :query-params} (get-contacts (get headers "accept") (get query "category")))
