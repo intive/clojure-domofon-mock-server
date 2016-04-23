@@ -53,7 +53,7 @@
               (not-empty contact)
                 (cond
                   (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})}
-                  (= accept-header "text/plain") {:status 406}
+                  (= accept-header "text/plain") {:headers {"Content-Type" "text/plain"} :body is-important}
                   :else {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})})
               :else  {:status 404} ))
     :else  {:status 400} ))
@@ -188,10 +188,18 @@
             (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
             :else {:status 415} )))))
 
+(defn get-first-message-as-map []
+  (map
+    (fn [m]
+      (let [mes (:messages m)]
+        (assoc m :messages {(:id m) (first mes)})))
+    (get-saved-categories)))
+
 (defn get-categories [accept-header]
+  (let [cat (get-first-message-as-map)]
   (cond
-    (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (get-saved-categories)}
-    :else {:status 406} ))
+    (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body cat}
+    :else {:status 406} )))
 
 (defn get-category [id]
   (cond
