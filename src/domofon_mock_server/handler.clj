@@ -265,6 +265,7 @@
   (DELETE "/categories/:id" [id] (delete-category id))
   (POST   "/categories/:id/notify" [id] (send-category-notification id))
   (GET    "/login" {headers :headers} (login (get headers "authorization")))
+  (GET    "/domofon.yaml" [] {:body "host:" :headers {"Content-Type" "text/plain"}})
   (route/not-found "Invalid url"))
 
 (defn norm-uri [handler]
