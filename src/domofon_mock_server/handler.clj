@@ -107,6 +107,7 @@
         till (:tillDate contact)
         category (:category contact)]
     (cond
+      (nil? contact) {:status 415}
       (or (empty? contact)
           (not (correct? (vals contact)))) (incorrect-fields-resp required-contact)
       (not (and (correct-date? from)
@@ -176,6 +177,7 @@
         accept-header (get headers "accept")
         auth-header (get headers "authorization")]
     (cond
+      (nil? category) {:status 415}
       (or (nil? auth-header)
           (not (= auth-header "Bearer super-secret"))) {:status 401}
       (or (empty? category)
@@ -188,15 +190,8 @@
             (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
             :else {:status 415} )))))
 
-(defn get-first-message-as-map []
-  (map
-    (fn [m]
-      (let [mes (:messages m)]
-        (assoc m :messages {(:id m) (first mes)})))
-    (get-saved-categories)))
-
 (defn get-categories [accept-header]
-  (let [cat (get-first-message-as-map)]
+  (let [cat (get-saved-categories)]
   (cond
     (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body cat}
     :else {:status 406} )))
@@ -242,6 +237,31 @@
 ;;              (->> (s/periodically 100 #(str (generate-string {:updatedAt (f/unparse (f/formatters :date-time) (lt/local-now))} date-time-format) "\n"))
 ;;                   (s/transform (take cnt))))}))
 
+(defn post-category-message [category-id message auth-header]
+  (cond
+      (not (correct-login? auth-header)) {:status 401}
+      (nil? message) {:status 422}
+      :else {:body (add-category-message category-id (uuid) message)}))
+
+(defn get-category-messages [category-id]
+  (let [saved (get-saved-categories)
+        cat (first (filter (fn [x] (= category-id (:id x))) saved))
+        ms (:messages cat)]
+    (map (fn [x] {:id (first x) :message (last x)}) ms)))
+
+(defn delete-category-message [category-id message-id auth-header]
+  (let [ids (map (fn [x] (:id x)) (get-category-messages category-id))]
+  (cond
+      (not (correct-login? auth-header)) {:status 401}
+      (and (= (count ids) 1)
+           (= (first ids) message-id)) {:status 400}
+      :else {:status (delete-message-if-exists category-id message-id)})))
+
+(defn put-category-message [category-id message-id message auth-header]
+  (cond
+      (not (correct-login? auth-header)) {:status 401}
+      :else {:body (add-category-message category-id message-id message)}))
+
 (defroutes app-routes
 ;;   (GET    "/contacts/sse" [] (streaming-numbers-handler))
   (GET    "/contacts/:id" [id] (get-contact id))
@@ -264,6 +284,21 @@
   (GET    "/categories/:id" [id] (get-category id))
   (DELETE "/categories/:id" [id] (delete-category id))
   (POST   "/categories/:id/notify" [id] (send-category-notification id))
+  (POST   "/categories/:id/messages" {{id :id} :params body :body headers :headers}
+    (cond
+      (= (str "class java.io.ByteArrayInputStream") (str (type body))) ;TODO write proper condition -> (instance?
+        (let [b (slurp body)]
+          (post-category-message id b (get headers "authorization")))
+      :else (post-category-message id body (get headers "authorization"))))
+  (GET    "/categories/:id/messages" [id] (get-category-messages id))
+  (DELETE "/categories/:categoryid/messages/:messageid" {{category-id :categoryid message-id :messageid} :params headers :headers}
+          (delete-category-message category-id message-id (get headers "authorization")))
+  (PUT    "/categories/:categoryid/messages/:messageid" {{category-id :categoryid message-id :messageid} :params body :body headers :headers}
+    (cond
+      (= (str "class java.io.ByteArrayInputStream") (str (type body))) ;TODO write proper condition -> (instance?
+        (let [b (slurp body)]
+          (put-category-message category-id message-id b (get headers "authorization")))
+      :else (put-category-message category-id message-id body (get headers "authorization"))))
   (GET    "/login" {headers :headers} (login (get headers "authorization")))
   (GET    "/domofon.yaml" [] {:body "host:" :headers {"Content-Type" "text/plain"}})
   (route/not-found "Invalid url"))
@@ -287,11 +322,9 @@
 (defn reject-wrong-req [handler]
   (fn [request]
     (let [content (get-in request [:headers "content-type"])
-          body (:body-params request)]
+          body (:body-params request)
+          orig-body (:body request)]
       (cond
-        (and (not (nil? content))
-                 (.contains content "text/plain")
-                 (string/blank? body)) {:status 415}
         (= (lazy-seq) body) {:status 400}
         (and (map? body)
              (empty? body)) {:status 422}

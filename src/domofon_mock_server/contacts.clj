@@ -74,7 +74,7 @@
 (defn add-required-category-fields [id category]
   (cond-> category
     true (assoc :id id)
-    true (assoc :messages [(:message category)])
+    true (assoc :messages {"10" (:message category)})
     (not (contains? category :isIndividual)) (assoc :isIndividual false)))
 
 (defn save-category [id category]
@@ -115,3 +115,17 @@
               (alter last-category-notification assoc id (t/plus local-now period))
               [true (t/plus local-now period)]))))
   nil))
+
+(defn assoc-in-category-if-key-exists [category category-id new-msg-id message]
+  (if (contains? category category-id) (assoc-in category [category-id :messages new-msg-id] message) category))
+
+(defn add-category-message [category-id new-msg-id message]
+  (swap! saved-categories assoc-in-category-if-key-exists category-id new-msg-id message)
+  new-msg-id)
+
+(defn delete-message [category-id message-id]
+  (swap! saved-categories dissoc-in [category-id :messages message-id]) 200) ;TODO DRY, remove http codes from here
+
+(defn delete-message-if-exists [category-id message-id]
+  (let [saved (filter #(= % message-id) (flatten (map (fn [x] (keys (:messages (last x)))) @saved-categories)))]
+    (if (empty? saved) 404 (delete-message category-id message-id)))) ;TODO DRY, remove http codes from here
