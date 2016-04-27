@@ -24,7 +24,7 @@
 
 (defn get-contact [id]
   (cond
-    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+    (string? id)
       (let [res (get-saved-contact id)]
           (cond
            (not-empty res) {:headers {"Content-Type" "application/json"} :body (generate-string (dissoc res :message) date-format)}
@@ -33,7 +33,7 @@
 
 (defn get-contact-deputy [id accept-header] ;TODO make it DRY
   (cond
-    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+    (string? id)
       (let [contact (get-saved-contact id)
             deputy (:deputy contact)]
           (cond
@@ -46,7 +46,7 @@
 
 (defn get-important-from-contact [id accept-header] ;TODO make it DRY
   (cond
-    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+    (string? id)
       (let [contact (get-saved-contact id)
             is-important (:isImportant contact)]
             (cond
@@ -99,6 +99,11 @@
       (and (not (or (nil? fromDate) (nil? tillDate)))
            (not (t/after? (f/parse (f/formatters :date) fromDate) (f/parse (f/formatters :date) tillDate))))))
 
+(def noti-stream (s/stream))
+
+(defn send-notification []
+  (s/put! noti-stream (str "event:updated\n" "data:" (generate-string {:updatedAt (f/unparse (f/formatters :date-hour-minute-second-ms) (lt/local-now))}) "\n\n")))
+
 (defn post-contact [contact headers]
   (let [missing (missing required-contact contact)
         missing-str (vec (map name missing))
@@ -118,8 +123,14 @@
       :else
         (let [saved (save-contact (uuid) contact)]
           (cond
-            (= accept-header "application/json") {:body {:id saved :secret "50d1745b-f4a3-492a-951e-68e944768e9a"}}
-            (= accept-header "text/plain") { :headers {"Content-Type" "text/plain"} :body saved}
+            (= accept-header "application/json")
+              (do
+                (send-notification)
+                {:body {:id saved :secret "50d1745b-f4a3-492a-951e-68e944768e9a"}})
+            (= accept-header "text/plain")
+              (do
+                (send-notification)
+                {:headers {"Content-Type" "text/plain"} :body saved})
             :else {:status 415} )))))
 
 (defn correct-login? [auth-header]
@@ -198,7 +209,7 @@
 
 (defn get-category [id]
   (cond
-    (not (nil? (re-matches #"[a-f0-9]{8}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{4}[-][a-f0-9]{12}" id)))
+    (string? id)
       (let [res (get-saved-category id)]
           (cond
            (not-empty res) {:headers {"Content-Type" "application/json"} :body res}
@@ -224,18 +235,11 @@
     {:status 200 :body "super-secret"}
     {:status 401}))
 
-;; (extend-protocol Renderable
-;;   manifold.deferred.Deferred
-;;   (render [d _] d))
-
-;; (defn streaming-numbers-handler
-;;   []
-;;   (let [cnt 50]
-;;     {:status 200
-;;      :headers {"content-type" "text/event-stream"}
-;;      :body (let [sent (atom 0)]
-;;              (->> (s/periodically 100 #(str (generate-string {:updatedAt (f/unparse (f/formatters :date-time) (lt/local-now))} date-time-format) "\n"))
-;;                   (s/transform (take cnt))))}))
+(defn streaming-numbers-handler
+  []
+    {:status 200
+     :headers {"content-type" "text/event-stream"}
+     :body noti-stream})
 
 (defn post-category-message [category-id message auth-header]
   (cond
@@ -263,7 +267,6 @@
       :else {:body (add-category-message category-id message-id message)}))
 
 (defroutes app-routes
-;;   (GET    "/contacts/sse" [] (streaming-numbers-handler))
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" {{id :id} :params headers :headers} (delete-contact id (get headers "authorization")))
   (GET    "/contacts" {headers :headers query :query-params} (get-contacts (get headers "accept") (get query "category")))
@@ -331,7 +334,7 @@
         :else (handler request)
     ))))
 
-(def handler
+(def rest-handler
   (-> app-routes
 ;;       (print-req-resp "INNER")
       (reject-wrong-req)
@@ -340,6 +343,11 @@
       (wrap-defaults api-defaults)
 ;;       (print-req-resp "OUTER")
   ))
+
+(defn handler [req]
+  (if (.contains (:uri req) "/contacts/sse")
+    (streaming-numbers-handler)
+    (rest-handler req)))
 
 (defn -main
   [& args]
