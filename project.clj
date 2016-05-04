@@ -10,4 +10,4 @@
                  [medley "0.7.4"]
                  [clj-time "0.11.0"]
                  [aleph "0.4.1-beta5"]]
-  :main domofon-mock-server.handler)
+  :main domofon-mock-server.server)
