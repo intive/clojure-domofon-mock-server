@@ -46,7 +46,7 @@
 
 (defn handler [req]
   (if (.contains (:uri req) "/contacts/sse")
-    (streaming-numbers-handler)
+    (sse-handler)
     (rest-handler req)))
 
 (defn -main

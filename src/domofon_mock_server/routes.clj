@@ -11,7 +11,7 @@
     {:status 200 :body "super-secret"}
     {:status 401}))
 
-(defn streaming-numbers-handler
+(defn sse-handler
   []
     {:status 200
      :headers {"content-type" "text/event-stream"}
