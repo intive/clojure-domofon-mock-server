@@ -34,18 +34,14 @@
     :else  {:status 400} ))
 
 (defn get-important-from-contact [id accept-header]
-  (cond
-    (string? id)
-      (let [contact (get-saved-contact id)
-            is-important (:isImportant contact)]
-            (cond
-              (not-empty contact)
-                (cond
-                  (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})}
-                  (= accept-header "text/plain") {:headers {"Content-Type" "text/plain"} :body is-important}
-                  :else {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})})
-              :else  {:status 404} ))
-    :else  {:status 400} ))
+  (let [[code contact] (get-contact-with-code id)]
+    (if (not (= 200 code))
+      {:status code}
+      (let [is-important (:isImportant contact)]
+        (cond
+          (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})}
+          (= accept-header "text/plain") {:headers {"Content-Type" "text/plain"} :body is-important}
+          :else {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})})))))
 
 (defn get-contacts [accept-header query-category]
   (cond
