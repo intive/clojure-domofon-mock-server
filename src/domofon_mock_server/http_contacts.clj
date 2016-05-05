@@ -96,19 +96,17 @@
     (correct-login? auth-header) {:status (delete-deputy-if-exists contact-id)}
     :else {:status 401}))
 
-(defn put-contact-deputy [contact-id deputy-string accept-header auth-header]
+(defn put-contact-deputy [contact-id deputy accept-header auth-header]
   (cond
     (nil? (get-saved-contact contact-id)) {:status 404}
     (correct-login? auth-header)
-      (let [deputy (clojure.walk/keywordize-keys deputy-string)]
-        (let [before (get-saved-contact contact-id)
-              swapped (add-deputy contact-id deputy)]
-              {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))
+      (let [before (get-saved-contact contact-id)
+            swapped (add-deputy contact-id deputy)]
+        {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})
     :else {:status 401})) ;TODO This could result in wrong status code
 
-(defn put-important-contact [contact-id is-important-string accept-header]
-  (let [is-important (clojure.walk/keywordize-keys is-important-string)
-        imp (:isImportant is-important)]
+(defn put-important-contact [contact-id is-important accept-header]
+  (let [imp (:isImportant is-important)]
     (if (or (number? imp)
             (string? imp)
             (and (map? imp)
