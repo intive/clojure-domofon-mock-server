@@ -6,16 +6,21 @@
             [cheshire.core :refer :all]
             [clj-time.coerce :as ct]))
 
-(defn get-contact [id]
-  (cond
-    (string? id)
-      (let [res (get-saved-contact id)]
-          (cond
-           (not-empty res) {:headers {"Content-Type" "application/json"} :body (generate-string (dissoc res :message) date-format)}
-           :else  {:status 404} ))
-    :else  {:status 400} ))
+(defn get-contact-with-code [id]
+  (if (not (string? id))
+        [400]
+        (let [contact (get-saved-contact id)]
+          (if (empty? contact)
+            [404]
+            [200 contact]))))
 
-(defn get-contact-deputy [id accept-header] ;TODO make it DRY
+(defn get-contact [id]
+  (let [[code contact] (get-contact-with-code id)]
+    (if (not (= 200 code))
+      {:status code}
+      {:headers {"Content-Type" "application/json"} :body (generate-string (dissoc contact :message) date-format)})))
+
+(defn get-contact-deputy [id accept-header]
   (cond
     (string? id)
       (let [contact (get-saved-contact id)
@@ -28,7 +33,7 @@
             :else  {:status 404} ))
     :else  {:status 400} ))
 
-(defn get-important-from-contact [id accept-header] ;TODO make it DRY
+(defn get-important-from-contact [id accept-header]
   (cond
     (string? id)
       (let [contact (get-saved-contact id)
