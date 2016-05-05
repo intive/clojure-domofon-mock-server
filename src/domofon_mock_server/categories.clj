@@ -29,10 +29,10 @@
       (contains? saved id) (get saved id)
       :else nil)))
 
-(defn delete-saved-category [id] (swap! saved-categories dissoc id) 200) ;TODO DRY, remove http codes from here
+(defn delete-saved-category [id] (swap! saved-categories dissoc id))
 
 (defn delete-category-if-exists [id]
-  (if (empty? (get-saved-category id)) 404 (delete-saved-category id))) ;TODO DRY, remove http codes from here
+  (if (empty? (get-saved-category id)) nil (delete-saved-category id)))
 
 (defn notify-category [id]
   (if (get-saved-category id)
@@ -60,8 +60,8 @@
   new-msg-id)
 
 (defn delete-message [category-id message-id]
-  (swap! saved-categories dissoc-in [category-id :messages message-id]) 200) ;TODO DRY, remove http codes from here
+  (swap! saved-categories dissoc-in [category-id :messages message-id]))
 
 (defn delete-message-if-exists [category-id message-id]
   (let [saved (filter #(= % message-id) (flatten (map (fn [x] (keys (:messages (last x)))) @saved-categories)))]
-    (if (empty? saved) 404 (delete-message category-id message-id)))) ;TODO DRY, remove http codes from here
+    (if (empty? saved) nil (delete-message category-id message-id))))

@@ -41,7 +41,7 @@
            :else  {:status 404} ))
     :else  {:status 400} ))
 
-(defn delete-category [id] {:status (delete-category-if-exists id)})
+(defn delete-category [id] {:status (if (nil? (delete-category-if-exists id)) 404 200)})
 
 (defn send-category-notification [id]
     (let [notify (notify-category id)
@@ -73,7 +73,7 @@
       (not (correct-login? auth-header)) {:status 401}
       (and (= (count ids) 1)
            (= (first ids) message-id)) {:status 400}
-      :else {:status (delete-message-if-exists category-id message-id)})))
+      :else {:status (if (nil? (delete-message-if-exists category-id message-id)) 404 200)})))
 
 (defn put-category-message [category-id message-id message auth-header]
   (cond
