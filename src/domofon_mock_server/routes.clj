@@ -17,16 +17,17 @@
      :headers {"content-type" "text/event-stream"}
      :body noti-stream})
 
+(defn read-if-stream
+  [value]
+  (if (instance? java.io.ByteArrayInputStream value)
+      (slurp value)
+      value))
+
 (defroutes app-routes
   (GET    "/contacts/:id" [id] (get-contact id))
   (DELETE "/contacts/:id" {{id :id} :params headers :headers} (delete-contact id (get headers "authorization")))
   (GET    "/contacts" {headers :headers query :query-params} (get-contacts (get headers "accept") (get query "category")))
-  (POST   "/contacts" {body :body-params headers :headers}
-    (cond
-      (= (str "class java.io.ByteArrayInputStream") (str (type body))) ;TODO write proper condition -> (instance?
-        (let [b (slurp body)]
-          (post-contact b headers))
-      :else (post-contact body headers)))
+  (POST   "/contacts" {body :body-params headers :headers} (post-contact (read-if-stream body) headers))
   (PUT    "/contacts/:id/deputy" {{id :id} :params body :body-params headers :headers} (put-contact-deputy id body (get headers "accept") (get headers "authorization")))
   (GET    "/contacts/:id/deputy" {{id :id} :params headers :headers} (get-contact-deputy id (get headers "accept")))
   (DELETE "/contacts/:id/deputy" {{id :id} :params headers :headers} (delete-contact-deputy id (get headers "authorization")))
@@ -38,21 +39,12 @@
   (GET    "/categories/:id" [id] (get-category id))
   (DELETE "/categories/:id" [id] (delete-category id))
   (POST   "/categories/:id/notify" [id] (send-category-notification id))
-  (POST   "/categories/:id/messages" {{id :id} :params body :body headers :headers}
-    (cond
-      (= (str "class java.io.ByteArrayInputStream") (str (type body))) ;TODO write proper condition -> (instance?
-        (let [b (slurp body)]
-          (post-category-message id b (get headers "authorization")))
-      :else (post-category-message id body (get headers "authorization"))))
+  (POST   "/categories/:id/messages" {{id :id} :params body :body headers :headers} (post-category-message id (read-if-stream body) (get headers "authorization")))
   (GET    "/categories/:id/messages" [id] (get-category-messages id))
   (DELETE "/categories/:categoryid/messages/:messageid" {{category-id :categoryid message-id :messageid} :params headers :headers}
           (delete-category-message category-id message-id (get headers "authorization")))
   (PUT    "/categories/:categoryid/messages/:messageid" {{category-id :categoryid message-id :messageid} :params body :body headers :headers}
-    (cond
-      (= (str "class java.io.ByteArrayInputStream") (str (type body))) ;TODO write proper condition -> (instance?
-        (let [b (slurp body)]
-          (put-category-message category-id message-id b (get headers "authorization")))
-      :else (put-category-message category-id message-id body (get headers "authorization"))))
+          (put-category-message category-id message-id (read-if-stream body) (get headers "authorization")))
   (GET    "/login" {headers :headers} (login (get headers "authorization")))
   (GET    "/domofon.yaml" [] {:body "host:" :headers {"Content-Type" "text/plain"}})
   (route/not-found "Invalid url"))
