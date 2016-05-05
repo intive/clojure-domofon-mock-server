@@ -12,8 +12,6 @@
 (def date-format {:date-format "yyyy-MM-dd"})
 (def date-time-format {:date-format "yyyy-MM-dd'T'HH:mm:ss"})
 
-(def required-categories #{:name :description :message})
-
 (defn missing [required available]
   (set/difference required (set (keys available))))
 

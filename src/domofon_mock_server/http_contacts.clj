@@ -1,5 +1,6 @@
 (ns domofon-mock-server.http_contacts
   (:use domofon-mock-server.contacts)
+  (:use domofon-mock-server.categories)
   (:use domofon-mock-server.http)
   (:require [aleph.http :as http]
             [cheshire.core :refer :all]

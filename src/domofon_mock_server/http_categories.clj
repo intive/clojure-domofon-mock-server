@@ -1,9 +1,11 @@
 (ns domofon-mock-server.http_categories
-  (:use domofon-mock-server.contacts)
+  (:use domofon-mock-server.categories)
   (:use domofon-mock-server.http)
   (:require [aleph.http :as http]
             [cheshire.core :refer :all]
             [clj-time.coerce :as ct]))
+
+(def required-categories #{:name :description :message})
 
 (defn post-categories [category headers]
   (let [missing (missing required-categories category)
