@@ -100,10 +100,9 @@
   (cond
     (nil? (get-saved-contact contact-id)) {:status 404}
     (correct-login? auth-header)
-      (let [before (get-saved-contact contact-id)
-            swapped (add-deputy contact-id deputy)]
-        {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}})
-    :else {:status 401})) ;TODO This could result in wrong status code
+      (let [swapped (add-deputy contact-id deputy)]
+        {:status (if (nil? (get swapped contact-id) ) 404 200) :headers {"Content-Type" "application/json"}})
+    :else {:status 401}))
 
 (defn put-important-contact [contact-id is-important accept-header]
   (let [imp (:isImportant is-important)]
@@ -112,9 +111,8 @@
             (and (map? imp)
                  (empty? imp)))
       {:status 422}
-      (let [before (get-saved-contact contact-id)
-            swapped (set-is-important contact-id (:isImportant is-important))]
-        {:status (if (= before (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))))  ;TODO This could result in wrong status code
+      (let [swapped (set-is-important contact-id (:isImportant is-important))]
+        {:status (if (nil? (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))))
 
 (defn send-contact-notification [id]
   (let [notify (notify-contact id)]
