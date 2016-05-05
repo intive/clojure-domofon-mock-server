@@ -32,10 +32,10 @@
   (swap! saved-contacts assoc id (add-required-contact-fields id contact))
   id)
 
-(defn delete-saved-contact [id] (swap! saved-contacts dissoc id) 200) ;TODO DRY, remove http codes from here
+(defn delete-saved-contact [id] (swap! saved-contacts dissoc id))
 
 (defn delete-contact-if-exists [id]
-  (if (empty? (get-saved-contact id)) 404 (delete-saved-contact id))) ;TODO DRY, remove http codes from here
+  (if (empty? (get-saved-contact id)) nil (delete-saved-contact id)))
 
 (defn assoc-if-key-exists [contact contact-id my-key my-value]
   (if (contains? contact contact-id) (assoc-in contact [contact-id my-key] my-value) contact))
@@ -43,10 +43,10 @@
 (defn add-deputy [contact-id deputy]
   (swap! saved-contacts assoc-if-key-exists contact-id :deputy deputy))
 
-(defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]) 200) ;TODO DRY, remove http codes from here
+(defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]))
 
 (defn delete-deputy-if-exists [contact-id]
-  (if (empty? (get-saved-contact contact-id)) 404 (delete-deputy contact-id))) ;TODO DRY, remove http codes from here
+  (if (empty? (get-saved-contact contact-id)) nil (delete-deputy contact-id)))
 
 (defn set-is-important [contact-id is-important]
   (swap! saved-contacts assoc-if-key-exists contact-id :isImportant is-important))

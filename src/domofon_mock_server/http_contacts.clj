@@ -88,13 +88,13 @@
 (defn delete-contact [id auth-header]
   (cond
     (nil? (get-saved-contact id)) {:status 404}
-    (correct-login? auth-header) {:status (delete-contact-if-exists id)}
+    (correct-login? auth-header) {:status (if (nil? (delete-contact-if-exists id)) 404 200)}
     :else {:status 401}))
 
 (defn delete-contact-deputy [contact-id auth-header]
   (cond
     (nil? (get-saved-contact contact-id)) {:status 404}
-    (correct-login? auth-header) {:status (delete-deputy-if-exists contact-id)}
+    (correct-login? auth-header) {:status (if (nil? (delete-deputy-if-exists contact-id)) 404 200)}
     :else {:status 401}))
 
 (defn put-contact-deputy [contact-id deputy accept-header auth-header]
