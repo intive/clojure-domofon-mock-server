@@ -9,5 +9,6 @@
                  [ring/ring-defaults "0.1.5"]
                  [medley "0.7.4"]
                  [clj-time "0.11.0"]
-                 [aleph "0.4.1-beta5"]]
+                 [aleph "0.4.1-beta5"]
+                 [com.datomic/datomic-free "0.9.5359"]]
   :main domofon-mock-server.server)
