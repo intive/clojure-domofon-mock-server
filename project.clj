@@ -11,4 +11,6 @@
                  [clj-time "0.11.0"]
                  [aleph "0.4.1-beta5"]
                  [com.datomic/datomic-free "0.9.5359"]]
-  :main domofon-mock-server.server)
+  :main domofon-mock-server.server
+  :profiles {:dev {:dependencies [[expectations "2.1.8"]]
+                   :plugins [[lein-autoexpect "1.9.0"]]}})
