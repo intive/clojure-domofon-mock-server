@@ -16,7 +16,11 @@
   (set/difference required (set (keys available))))
 
 (defn missing-resp [missing-str]
-  {:status 422 :body {:code 422 :message (str "Missing fields: " missing-str) :fields missing-str} :headers {"Content-Type" "application/json"} })
+  {:status 422
+   :body {:code 422
+          :message (str "Missing fields: " missing-str)
+          :fields missing-str}
+   :headers {"Content-Type" "application/json"} })
 
 (defn correct? [fields & {:keys [str-fields] :or {str-fields (count fields)}}]
   (let [corr (->> fields
@@ -25,7 +29,11 @@
     (= str-fields (count corr))))
 
 (defn incorrect-fields-resp [incorrect-fields]
-  {:status 422 :body {:code 422 :message (str "Incorrect fields: " incorrect-fields) :fields incorrect-fields} :headers {"Content-Type" "application/json"} })
+  {:status 422
+   :body {:code 422
+          :message (str "Incorrect fields: " incorrect-fields)
+          :fields incorrect-fields}
+   :headers {"Content-Type" "application/json"} })
 
 (defn correct-date-format? [date-string]
   (not (nil? (re-matches #"[0-9]{4}-[0-9]{2}-[0-9]{2}" date-string))))

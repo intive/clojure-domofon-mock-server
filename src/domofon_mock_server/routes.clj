@@ -7,7 +7,8 @@
 
 (defn login [auth-header]
   (if (h/correct-login? auth-header)
-    {:status 200 :body "super-secret"}
+    {:status 200
+     :body "super-secret"}
     {:status 401}))
 
 (defn sse-handler
@@ -45,5 +46,6 @@
   (PUT    "/categories/:categoryid/messages/:messageid" {{category-id :categoryid message-id :messageid} :params body :body headers :headers}
           (cat/put-category-message category-id message-id (read-if-stream body) (get headers "authorization")))
   (GET    "/login" {headers :headers} (login (get headers "authorization")))
-  (GET    "/domofon.yaml" [] {:body "host:" :headers {"Content-Type" "text/plain"}})
+  (GET    "/domofon.yaml" [] {:body "host:"
+                              :headers {"Content-Type" "text/plain"}})
   (route/not-found "Invalid url"))

@@ -29,7 +29,8 @@
 (defn get-categories [accept-header]
   (let [cat (cat/get-saved-categories)]
   (cond
-    (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body cat}
+    (= accept-header "application/json") {:headers {"Content-Type" "application/json"}
+                                          :body cat}
     :else {:status 406} )))
 
 (defn get-category [id]
@@ -37,7 +38,8 @@
     (string? id)
       (let [res (cat/get-saved-category id)]
           (cond
-           (not-empty res) {:headers {"Content-Type" "application/json"} :body res}
+           (not-empty res) {:headers {"Content-Type" "application/json"}
+                            :body res}
            :else  {:status 404} ))
     :else  {:status 400} ))
 
@@ -53,7 +55,10 @@
         :else (let [[send datetime] notify]
                 (if (= send true)
                   "ok"
-                  {:status 429 :body (generate-string {:message "Try again later." :whenAllowed (ct/to-date datetime)} h/date-time-format) :headers {"Content-Type" "application/json"} })))))
+                  {:status 429
+                   :body (generate-string {:message "Try again later."
+                                           :whenAllowed (ct/to-date datetime)} h/date-time-format)
+                   :headers {"Content-Type" "application/json"} })))))
 
 (defn post-category-message [category-id message auth-header]
   (cond
@@ -65,7 +70,8 @@
   (let [saved (cat/get-saved-categories)
         cat (first (filter (fn [x] (= category-id (:id x))) saved))
         ms (:messages cat)]
-    (map (fn [x] {:id (first x) :message (last x)}) ms)))
+    (map (fn [x] {:id (first x)
+                  :message (last x)}) ms)))
 
 (defn delete-category-message [category-id message-id auth-header]
   (let [ids (map (fn [x] (:id x)) (get-category-messages category-id))]

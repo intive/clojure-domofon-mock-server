@@ -18,7 +18,8 @@
   (let [[code contact] (get-contact-with-code id)]
     (if (not (= 200 code))
       {:status code}
-      {:headers {"Content-Type" "application/json"} :body (generate-string (dissoc contact :message) h/date-format)})))
+      {:headers {"Content-Type" "application/json"}
+       :body (generate-string (dissoc contact :message) h/date-format)})))
 
 (defn get-contact-deputy [id accept-header]
   (cond
@@ -28,7 +29,8 @@
           (cond
             (not-empty deputy)
               (cond
-                (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string deputy h/date-format)}
+                (= accept-header "application/json") {:headers {"Content-Type" "application/json"}
+                                                      :body (generate-string deputy h/date-format)}
                 :else {:status 406} )
             :else  {:status 404} ))
     :else  {:status 400} ))
@@ -39,9 +41,12 @@
       {:status code}
       (let [is-important (:isImportant contact)]
         (cond
-          (= accept-header "application/json") {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})}
-          (= accept-header "text/plain") {:headers {"Content-Type" "text/plain"} :body is-important}
-          :else {:headers {"Content-Type" "application/json"} :body (generate-string {:isImportant is-important})})))))
+          (= accept-header "application/json") {:headers {"Content-Type" "application/json"}
+                                                :body (generate-string {:isImportant is-important})}
+          (= accept-header "text/plain") {:headers {"Content-Type" "text/plain"}
+                                          :body is-important}
+          :else {:headers {"Content-Type" "application/json"}
+                 :body (generate-string {:isImportant is-important})})))))
 
 (defn get-contacts [accept-header query-category]
   (cond
@@ -78,11 +83,13 @@
             (= accept-header "application/json")
               (do
                 (h/send-notification)
-                {:body {:id saved :secret "50d1745b-f4a3-492a-951e-68e944768e9a"}})
+                {:body {:id saved
+                        :secret "50d1745b-f4a3-492a-951e-68e944768e9a"}})
             (= accept-header "text/plain")
               (do
                 (h/send-notification)
-                {:headers {"Content-Type" "text/plain"} :body saved})
+                {:headers {"Content-Type" "text/plain"}
+                 :body saved})
             :else {:status 415} )))))
 
 (defn delete-contact [id auth-header]
@@ -102,7 +109,8 @@
     (nil? (contact/get-saved-contact contact-id)) {:status 404}
     (h/correct-login? auth-header)
       (let [swapped (contact/add-deputy contact-id deputy)]
-        {:status (if (nil? (get swapped contact-id) ) 404 200) :headers {"Content-Type" "application/json"}})
+        {:status (if (nil? (get swapped contact-id) ) 404 200)
+         :headers {"Content-Type" "application/json"}})
     :else {:status 401}))
 
 (defn put-important-contact [contact-id is-important accept-header]
@@ -113,11 +121,15 @@
                  (empty? imp)))
       {:status 422}
       (let [swapped (contact/set-is-important contact-id (:isImportant is-important))]
-        {:status (if (nil? (get swapped contact-id)) 404 200) :headers {"Content-Type" "application/json"}}))))
+        {:status (if (nil? (get swapped contact-id)) 404 200)
+         :headers {"Content-Type" "application/json"}}))))
 
 (defn send-contact-notification [id]
   (let [notify (contact/notify-contact id)]
     (if (not (nil? notify))
       (let [[send datetime] notify]
-        (if (= send true) "ok" {:status 429 :body (generate-string {:message "Try again later." :whenAllowed (ct/to-date datetime)} h/date-time-format) :headers {"Content-Type" "application/json"} }))
+        (if (= send true) "ok" {:status 429
+                                :body (generate-string {:message "Try again later."
+                                                        :whenAllowed (ct/to-date datetime)} h/date-time-format)
+                                :headers {"Content-Type" "application/json"} }))
         {:status 404})))
