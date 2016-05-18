@@ -1,6 +1,6 @@
 (ns domofon-mock-server.http
   (:require [aleph.http :as http]
-            [cheshire.core :refer :all]
+            [cheshire.core :refer [generate-string]]
             [clojure.set :as set]
             [clj-time.core :as t]
             [clj-time.format :as f]

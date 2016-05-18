@@ -1,6 +1,6 @@
 (ns domofon-mock-server.server
-  (:use domofon-mock-server.routes)
-  (:require [aleph.http :as http]
+  (:require [domofon-mock-server.routes :refer [app-routes sse-handler]]
+            [aleph.http :as http]
             [clojure.string :as string]
             [ring.middleware.format :refer [wrap-restful-format]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]])
