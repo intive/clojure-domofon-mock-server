@@ -44,7 +44,7 @@
 ;;       (print-req-resp "OUTER")
   ))
 
-(defn handler [req]
+(defn server-handler [req]
   (if (.contains (:uri req) "/contacts/sse")
     (sse-handler)
     (rest-handler req)))
@@ -53,4 +53,4 @@
   [& args]
   (let [port 5555]
     (println "Starting domofon-mock server on port " port)
-    (http/start-server handler {:port port})))
+    (http/start-server server-handler {:port port})))
