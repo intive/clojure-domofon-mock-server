@@ -75,7 +75,7 @@
       (not (and (h/correct-date? from)
                 (h/correct-date? till))) {:status 422}
       (not (h/dates-in-order from till)) {:status 422}
-      (not (empty? missing)) (h/missing-resp missing-str)
+      (seq missing) (h/missing-resp missing-str)
       (nil? (cat/get-saved-category category)) {:status 422}
       :else
         (let [saved (contact/save-contact (h/uuid) contact)]

@@ -18,7 +18,7 @@
           (not (= auth-header "Bearer super-secret"))) {:status 401}
       (or (empty? category)
           (not (h/correct? (vals category) :str-fields 3))) (h/incorrect-fields-resp required-categories)
-      (not (empty? missing)) (h/missing-resp missing-str)
+      (seq missing) (h/missing-resp missing-str)
       :else
         (let [saved (cat/save-category (h/uuid) category)]
           (cond
