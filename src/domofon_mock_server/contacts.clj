@@ -35,7 +35,7 @@
 (defn delete-saved-contact [id] (swap! saved-contacts dissoc id))
 
 (defn delete-contact-if-exists [id]
-  (if (empty? (get-saved-contact id)) nil (delete-saved-contact id)))
+  (when-not (empty? (get-saved-contact id)) (delete-saved-contact id)))
 
 (defn assoc-if-key-exists [contact contact-id my-key my-value]
   (if (contains? contact contact-id) (assoc-in contact [contact-id my-key] my-value) contact))
@@ -46,13 +46,13 @@
 (defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]))
 
 (defn delete-deputy-if-exists [contact-id]
-  (if (empty? (get-saved-contact contact-id)) nil (delete-deputy contact-id)))
+  (when-not (empty? (get-saved-contact contact-id)) (delete-deputy contact-id)))
 
 (defn set-is-important [contact-id is-important]
   (swap! saved-contacts assoc-if-key-exists contact-id :isImportant is-important))
 
 (defn notify-contact [id]
-  (if (get-saved-contact id)
+  (when (get-saved-contact id)
     (dosync
       (let [last (get @last-contact-notification id)
             local-now (lt/local-now)
@@ -66,5 +66,4 @@
           :else
             (do
               (alter last-contact-notification assoc id (t/plus local-now period))
-              [true (t/plus local-now period)]))))
-  nil))
+              [true (t/plus local-now period)]))))))
