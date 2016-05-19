@@ -11,7 +11,7 @@
       (let [host-port (str (:server-name request) ":" (:server-port request))]
         (if (.contains (:uri request) host-port)
           (let [absolute-prefix (str (name (:scheme request)) "://" host-port)]
-            (handler (assoc request :uri (string/replace (:uri request) absolute-prefix ""))))
+            (handler (update-in request [:uri] string/replace absolute-prefix "")))
           (handler request)))))
 
 (defn print-req-resp [handler marker]
@@ -44,7 +44,7 @@
 ;;       (print-req-resp "OUTER")
   ))
 
-(defn handler [req]
+(defn server-handler [req]
   (if (.contains (:uri req) "/contacts/sse")
     (sse-handler)
     (rest-handler req)))
@@ -53,4 +53,4 @@
   [& args]
   (let [port 5555]
     (println "Starting domofon-mock server on port " port)
-    (http/start-server handler {:port port})))
+    (http/start-server server-handler {:port port})))

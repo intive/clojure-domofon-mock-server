@@ -8,10 +8,11 @@
 (def last-category-notification (ref {}))
 
 (defn add-required-category-fields [id category]
-  (cond-> category
-    true (assoc :id id)
-    true (assoc :messages {"10" (:message category)})
-    (not (contains? category :isIndividual)) (assoc :isIndividual false)))
+    (-> category
+      (assoc :id id)
+      (assoc :messages {"10" (:message category)})
+      (cond->
+        (not (contains? category :isIndividual)) (assoc :isIndividual false))))
 
 (defn save-category [id category]
   (swap! saved-categories assoc id (add-required-category-fields id category))
@@ -32,10 +33,10 @@
 (defn delete-saved-category [id] (swap! saved-categories dissoc id))
 
 (defn delete-category-if-exists [id]
-  (if (empty? (get-saved-category id)) nil (delete-saved-category id)))
+  (when (seq (get-saved-category id)) (delete-saved-category id)))
 
 (defn notify-category [id]
-  (if (get-saved-category id)
+  (when (get-saved-category id)
     (dosync
       (let [last (get @last-category-notification id)
             local-now (lt/local-now)
@@ -49,8 +50,7 @@
           :else
             (do
               (alter last-category-notification assoc id (t/plus local-now period))
-              [true (t/plus local-now period)]))))
-  nil))
+              [true (t/plus local-now period)]))))))
 
 (defn assoc-in-category-if-key-exists [category category-id new-msg-id message]
   (if (contains? category category-id) (assoc-in category [category-id :messages new-msg-id] message) category))
@@ -64,4 +64,4 @@
 
 (defn delete-message-if-exists [category-id message-id]
   (let [saved (filter #(= % message-id) (flatten (map (fn [x] (keys (:messages (last x)))) @saved-categories)))]
-    (if (empty? saved) nil (delete-message category-id message-id))))
+    (when (seq saved) (delete-message category-id message-id))))

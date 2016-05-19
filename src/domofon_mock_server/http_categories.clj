@@ -15,10 +15,10 @@
     (cond
       (nil? category) {:status 415}
       (or (nil? auth-header)
-          (not (= auth-header "Bearer super-secret"))) {:status 401}
+          (not= auth-header "Bearer super-secret")) {:status 401}
       (or (empty? category)
           (not (h/correct? (vals category) :str-fields 3))) (h/incorrect-fields-resp required-categories)
-      (not (empty? missing)) (h/missing-resp missing-str)
+      (seq missing) (h/missing-resp missing-str)
       :else
         (let [saved (cat/save-category (h/uuid) category)]
           (cond
@@ -74,7 +74,7 @@
                   :message (last x)}) ms)))
 
 (defn delete-category-message [category-id message-id auth-header]
-  (let [ids (map (fn [x] (:id x)) (get-category-messages category-id))]
+  (let [ids (map :id (get-category-messages category-id))]
   (cond
       (not (h/correct-login? auth-header)) {:status 401}
       (and (= (count ids) 1)

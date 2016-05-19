@@ -7,7 +7,7 @@
             [clj-time.coerce :as ct]))
 
 (defn get-contact-with-code [id]
-  (if (not (string? id))
+  (if-not (string? id)
         [400]
         (let [contact (contact/get-saved-contact id)]
           (if (empty? contact)
@@ -16,7 +16,7 @@
 
 (defn get-contact [id]
   (let [[code contact] (get-contact-with-code id)]
-    (if (not (= 200 code))
+    (if-not (= 200 code)
       {:status code}
       {:headers {"Content-Type" "application/json"}
        :body (generate-string (dissoc contact :message) h/date-format)})))
@@ -37,7 +37,7 @@
 
 (defn get-important-from-contact [id accept-header]
   (let [[code contact] (get-contact-with-code id)]
-    (if (not (= 200 code))
+    (if-not (= 200 code)
       {:status code}
       (let [is-important (:isImportant contact)]
         (cond
@@ -75,7 +75,7 @@
       (not (and (h/correct-date? from)
                 (h/correct-date? till))) {:status 422}
       (not (h/dates-in-order from till)) {:status 422}
-      (not (empty? missing)) (h/missing-resp missing-str)
+      (seq missing) (h/missing-resp missing-str)
       (nil? (cat/get-saved-category category)) {:status 422}
       :else
         (let [saved (contact/save-contact (h/uuid) contact)]
@@ -126,7 +126,7 @@
 
 (defn send-contact-notification [id]
   (let [notify (contact/notify-contact id)]
-    (if (not (nil? notify))
+    (if-not (nil? notify)
       (let [[send datetime] notify]
         (if (= send true) "ok" {:status 429
                                 :body (generate-string {:message "Try again later."
