@@ -8,10 +8,11 @@
 (def last-category-notification (ref {}))
 
 (defn add-required-category-fields [id category]
-  (cond-> category
-    true (assoc :id id)
-    true (assoc :messages {"10" (:message category)})
-    (not (contains? category :isIndividual)) (assoc :isIndividual false)))
+    (-> category
+      (assoc :id id)
+      (assoc :messages {"10" (:message category)})
+      (cond->
+        (not (contains? category :isIndividual)) (assoc :isIndividual false))))
 
 (defn save-category [id category]
   (swap! saved-categories assoc id (add-required-category-fields id category))

@@ -22,11 +22,12 @@
 (defn now [] (new java.util.Date))
 
 (defn add-required-contact-fields [id contact]
-  (cond-> contact
-    true (assoc :id id)
-    (not (contains? contact :adminEmail)) (assoc :adminEmail (:notifyEmail contact))
-    (not (contains? contact :isImportant)) (assoc :isImportant false)
-    (not (contains? contact :fromDate)) (assoc :fromDate (now))))
+  (-> contact
+    (assoc :id id)
+    (cond->
+      (not (contains? contact :adminEmail)) (assoc :adminEmail (:notifyEmail contact))
+      (not (contains? contact :isImportant)) (assoc :isImportant false)
+      (not (contains? contact :fromDate)) (assoc :fromDate (now)))))
 
 (defn save-contact [id contact]
   (swap! saved-contacts assoc id (add-required-contact-fields id contact))
