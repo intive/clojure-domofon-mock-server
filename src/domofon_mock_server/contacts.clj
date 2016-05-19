@@ -35,7 +35,7 @@
 (defn delete-saved-contact [id] (swap! saved-contacts dissoc id))
 
 (defn delete-contact-if-exists [id]
-  (when-not (empty? (get-saved-contact id)) (delete-saved-contact id)))
+  (when (seq (get-saved-contact id)) (delete-saved-contact id)))
 
 (defn assoc-if-key-exists [contact contact-id my-key my-value]
   (if (contains? contact contact-id) (assoc-in contact [contact-id my-key] my-value) contact))
@@ -46,7 +46,7 @@
 (defn delete-deputy [contact-id] (swap! saved-contacts dissoc-in [contact-id :deputy]))
 
 (defn delete-deputy-if-exists [contact-id]
-  (when-not (empty? (get-saved-contact contact-id)) (delete-deputy contact-id)))
+  (when (seq (get-saved-contact contact-id)) (delete-deputy contact-id)))
 
 (defn set-is-important [contact-id is-important]
   (swap! saved-contacts assoc-if-key-exists contact-id :isImportant is-important))
